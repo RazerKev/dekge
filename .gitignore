@@ -27,6 +27,11 @@ yarn-error.log*
 # local env files
 .env*.local
 
+#--------------------------------------------------------------
+# NEW - Added env file from Kinde for Authentication senstive data 
+.env
+#--------------------------------------------------------------
+
 # vercel
 .vercel
 
