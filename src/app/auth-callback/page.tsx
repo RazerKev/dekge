@@ -1,30 +1,55 @@
+"use client"
+
 import { useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "../_trpc/client";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 
-const Page = async () => {
+const Page = () => {
   const router = useRouter(); // Helps us get access to the query parameter '?origin=dashboard'
 
   const searchParams = useSearchParams();
   const origin = searchParams.get("origin");
 
-  // First agrument is 'undefined' since we don't expect any new data request (Ex. post request body)
-  const { data, isLoading } = trpc.authCallback.useQuery(undefined, {
-    onSuccess: ({ success }) => {
-      // Get and destructure success data (boolean) from 'trpc/index.ts'
-      if (success) {
-        // If user synced to database (DB), navagiated them back to DB
-        // If there's an origin (can be 'string' or 'null'), navagate them back there but if there's no origin, then will always send them back to dashboard (Basically send to dashboard either or)
-        router.push(origin ? `/${origin}` : "/dashboard");
-      }
-    },
-    onError: (err) => {
-      if (err.data?.code === "UNAUTHORIZED") {
-        router.push("/sign-in");
-      }
-    },
-    retry: true,
+  // -----------------------------------------------------------
+
+  // NOTE: TRPC Verion 10+ is incompatible with React-Query V5 based on this reply: https://github.com/TanStack/query/issues/6186#issuecomment-1772356489
+
+  // Will have to downgrade from React-Query (RQ) new upgrade, version 5 to latest verion 4 one that is working: ("@tanstack/react-query": "^4.36.1",). TRPC verion 11 is in work which will be compatible with RQ Version 5.
+
+  // Have to downgrade to prevent the "hashQueryKey is not exported from tanstack/react-query" error.
+
+  // -----------------------------------------------------------
+
+  const { isPending, isError, isSuccess } = useQuery({
+    queryKey: ["user"],
+    queryFn: () => trpc.authCallback,
     retryDelay: 500,
   });
+
+  if (isPending) {
+    return <span>Loading...</span>;
+  }
+
+  if (isError) {
+    router.push("/sign-in");
+    // return <span>Error: {error.message}</span>;
+  }
+
+  if (isSuccess) {
+    router.push(origin ? `/${origin}` : `/dashboard`);
+  }
+
+  return (
+    <div className="w-full mt-24 flex justify-center">
+      <div className="flex flex-col items-center gap-2">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-800" />
+        <h3 className="font-semibold text-xl">Setting up your account...</h3>
+        <p>You will be redirected automatically.</p>
+      </div>
+    </div>
+  );
+
   // URL -> `/auth-callback?origin=dashboard`
   // `origin` -> 'dashboard'
 };

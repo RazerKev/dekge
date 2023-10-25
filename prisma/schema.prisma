@@ -6,6 +6,19 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+// Database model the user is synchronize to when log in. Once set up, do 'npx prisma db push' as follow on docs to force it in cloud.
+model User {
+  id    String @id @unique // Comes from authenticaiton provider so no '@defualt' as the docs. We're using same 'id' matches Kinde user 'id'
+  email String @unique
+
+  // Stripe Part for each user
+  stripeCustomerId       String?   @unique @map(name: "stripe_customer_id") // Optional with '?' b/c not every user will be a customer
+  stripeSubscriptionId   String?   @unique @map(name: "stripe_subscription_id")
+  stripePriceId          String?   @map(name: "stripe_price_id")
+  stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
 }
