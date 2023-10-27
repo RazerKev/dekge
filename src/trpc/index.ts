@@ -1,13 +1,12 @@
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { publicProcedure, router } from "./trpc";
+import { privateProcedure, publicProcedure, router } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { db } from "@/db";
-
-import { useQuery } from '@tanstack/react-query'
+import { z } from "zod";
 
 export const appRouter = router({
   // Added export
-  // Get request to the database to see if the user exists or not
+  // Get request to the database to see if the user exists or not. With 'publicProcedure', anyone can query this API endpoint.
   authCallback: publicProcedure.query(async () => {
     const { getUser } = getKindeServerSession();
     const user = getUser();
@@ -35,6 +34,25 @@ export const appRouter = router({
     }
 
     return { success: true };
+  }),
+  // Another API Endpoint - getUserFiles - pass in user ID and get back all the files that user owns. No 'publicProcedure', only signed in users can call this API (not public)
+  getUserFiles: privateProcedure.query(async ({ ctx }) => {
+    const { userId, user } = ctx;
+
+    return await db.file.findMany({
+      where: {
+        userId,
+      },
+    });
+  }),
+  // Another API Endpoint - Deleting files from the trashcan button. 'input()' is like a post-body input instead of 'get' from 'query()'
+  // Force API endpoint to run at runtime with zod (TypeScript is buildtime) and when passing an object, it needs to have an id property of type string. API will throw an error if doesn't come true & can't call endpoint
+  deleteFiles: privateProcedure.input(
+    z.object({ id: z.string() })
+  ).mutation(async ({ctx}) => {
+    const {userId} = ctx
+
+    const file = await
   }),
 });
 // Export type router type signature,

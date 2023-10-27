@@ -1,3 +1,5 @@
+// NOTE - when doing local changes in this file, always push them in database first and then generate local types using "npx primsa db push" to push changes in DB and "npx prisma generate" to generate local typescript
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -6,7 +8,7 @@ generator client {
 }
 
 datasource db {
-  provider     = "mysql"
+  provider     = "mysql" // Changed to mysql
   url          = env("DATABASE_URL")
   relationMode = "prisma"
 }
@@ -16,9 +18,38 @@ model User {
   id    String @id @unique // Comes from authenticaiton provider so no '@defualt' as the docs. We're using same 'id' matches Kinde user 'id'
   email String @unique
 
+  // Each User having multiple Files
+  File File[] // Each user can have multiple files in Array of files
+
   // Stripe Part for each user
   stripeCustomerId       String?   @unique @map(name: "stripe_customer_id") // Optional with '?' b/c not every user will be a customer
   stripeSubscriptionId   String?   @unique @map(name: "stripe_subscription_id")
   stripePriceId          String?   @map(name: "stripe_price_id")
   stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
+}
+
+enum UploadStatus {
+  // Status for file upload
+  PENDING
+  PROCESSING
+  FAILED
+  SUCCESS
+}
+
+model File {
+  id   String @id @default(cuid()) // Prisma will generate the ID automatically
+  name String
+
+  uploadStatus UploadStatus @default(PENDING)
+
+  // Each file will contain a URL
+  url String
+  key String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Prisma added these two lines in relatioin when added "File File[]" below when using Prettier
+  User   User?   @relation(fields: [userId], references: [id])
+  userId String?
 }

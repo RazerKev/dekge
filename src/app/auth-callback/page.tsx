@@ -1,4 +1,4 @@
-"use client"
+"use client"; // Delcare this as client side for it to work. Are using the "useSearchParams()" which returns on client side.
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "../_trpc/client";
@@ -21,15 +21,12 @@ const Page = () => {
 
   // -----------------------------------------------------------
 
-  const { isPending, isError, isSuccess } = useQuery({
+  const { isError, isSuccess } = useQuery({
     queryKey: ["user"],
     queryFn: () => trpc.authCallback,
+    retry: true,
     retryDelay: 500,
   });
-
-  if (isPending) {
-    return <span>Loading...</span>;
-  }
 
   if (isError) {
     router.push("/sign-in");
