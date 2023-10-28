@@ -47,13 +47,31 @@ export const appRouter = router({
   }),
   // Another API Endpoint - Deleting files from the trashcan button. 'input()' is like a post-body input instead of 'get' from 'query()'
   // Force API endpoint to run at runtime with zod (TypeScript is buildtime) and when passing an object, it needs to have an id property of type string. API will throw an error if doesn't come true & can't call endpoint
-  deleteFiles: privateProcedure.input(
-    z.object({ id: z.string() })
-  ).mutation(async ({ctx}) => {
-    const {userId} = ctx
+  deleteFiles: privateProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = ctx;
 
-    const file = await
-  }),
+      const file = await db.file.findFirst({
+        where: {
+          id: input.id, // Make sure the input.id matches the ID of the file in database. 'input.id' is type string from the 'privateProcedure.input()' line
+
+          // Note - Extremely insecure, anyone can pass in any id and find & delete the file. So make sure the file has the userID of the user that's calling the API endpoint below.
+          userId,
+
+          // Overall, searches for the currernt logged in user ID and the current filels the logged in user owns.
+        },
+      });
+      if (!file) throw new TRPCError({ code: "NOT_FOUND" });
+
+      await db.file.delete({
+        where: {
+          id: input.id,
+          // userId
+        },
+      });
+      return file;
+    }),
 });
 // Export type router type signature,
 // NOT the router itself.
