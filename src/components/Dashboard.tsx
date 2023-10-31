@@ -2,7 +2,7 @@
 
 import { trpc } from "@/app/_trpc/client";
 import UploadButton from "./UploadButton";
-import { Ghost, MessageSquare, Plus, Trash } from "lucide-react";
+import { Ghost, Loader2, MessageSquare, Plus, Trash } from "lucide-react";
 import Skeleton from "react-loading-skeleton";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -10,13 +10,14 @@ import { Button } from "./ui/button";
 import { useState } from "react";
 
 const Dashboard = () => {
-  
   // To know which file is being deleted specifically. Set as a string or null and currently is set as a null for default.
-  const [currentlyDeletingFile, setCurrentlyDeletingFile] = useState<string | null>(null)
+  const [currentlyDeletingFile, setCurrentlyDeletingFile] = useState<
+    string | null
+  >(null);
 
   // Force invalidate and refresh the data - useful for having user not refresh entire page
   // NOTE - The hook 'useContext' was renamed to 'useUtils' until Version 10.41.0 (and is still aliased for foreseeable future) - Based on tRPC doc
-  const utils = trpc.useUtils() // Will be call inside 'trpc.deleteFiles.useMutation()' below 'useUtils' gives you access to helpers that let you managed cahed data of queries (gives access yo the 'invalidate' helper)
+  const utils = trpc.useUtils(); // Will be call inside 'trpc.deleteFiles.useMutation()' below 'useUtils' gives you access to helpers that let you managed cahed data of queries (gives access yo the 'invalidate' helper)
 
   // data will be renamed to 'files'
   // Two lines of code below is using a client side
@@ -24,16 +25,18 @@ const Dashboard = () => {
 
   // Renamed built-in 'mutate' to 'deleteFiles' since it is being deleted
   const { mutate: deleteFiles } = trpc.deleteFiles.useMutation({
-    // Route has been successful & file has been deleted, callback is executed 
+    // Route has been successful & file has been deleted, callback is executed
     onSuccess: () => {
-      utils.getUserFiles.invalidate() // Force 'getuserFiles()' to fetch data & refresh without manually refreshing or wating for query to become stale (out of date) before refetched again on success when deleting a file, invalidate and it will automatically realize file is not there.
+      utils.getUserFiles.invalidate(); // Force 'getuserFiles()' to fetch data & refresh without manually refreshing or wating for query to become stale (out of date) before refetched again on success when deleting a file, invalidate and it will automatically realize file is not there.
     },
-    onMutate({id}) {
-      setCurrentlyDeletingFile(id)
+    onMutate({ id }) {
+      // Triggers when the button is clicked
+      setCurrentlyDeletingFile(id);
     },
     onSettled() {
-      setCurrentlyDeletingFile(null) //Loading state should stop at this point
-    }
+      // When an error is thrown or API resolved successfully (done state)
+      setCurrentlyDeletingFile(null); //Loading state should stop at this point so set to null
+    },
   });
 
   return (
@@ -92,7 +95,12 @@ const Dashboard = () => {
                     className="w-full"
                     variant="destructive"
                   >
-                    <Trash className="h-4 w-4" />
+                    {/* Currently deleted file is === to file mapping over dot ID, then show JSX loading state, else, show trash icon */}
+                    {currentlyDeletingFile === file.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </li>
