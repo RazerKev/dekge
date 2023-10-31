@@ -15,7 +15,7 @@ const Page = () => {
 
   // NOTE: TRPC Verion 10+ is incompatible with React-Query V5 based on this reply: https://github.com/TanStack/query/issues/6186#issuecomment-1772356489
 
-  // Will have to downgrade from React-Query (RQ) new upgrade, version 5 to latest verion 4 one that is working: ("@tanstack/react-query": "^4.36.1",). TRPC verion 11 is in work which will be compatible with RQ Version 5.
+  // Will have to downgrade from React-Query (RQ) new upgrade, version 5, to latest verion 4 one that is working: ("@tanstack/react-query": "^4.36.1",). TRPC verion 11 is in work which will be compatible with RQ Version 5.
 
   // Have to downgrade to prevent the "hashQueryKey is not exported from tanstack/react-query" error.
 
