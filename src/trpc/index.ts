@@ -45,7 +45,26 @@ export const appRouter = router({
       },
     });
   }),
-  // Another API Endpoint - Deleting files from the trashcan button. 'input()' is like a post-body input instead of 'get' from 'query()'
+
+  // API Endpoint, getFile: getting info of a file. Checking if the input being obtained is an object schema and if the key for checking the database is a string.
+  // For the Polling Approach backend (API Endpoint)
+  getFile: privateProcedure
+    .input(z.object({ key: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = ctx;
+
+      const file = await db.file.findFirst({
+        where: {
+          key: input.key,
+          userId, // Makes sure the file pertain to current logged in user
+        },
+      });
+      if (!file) throw new TRPCError({ code: "NOT_FOUND" }); //404 Error
+
+      return file
+    }),
+
+  // Another API Endpoint - Deleting files from the trashcan button. 'input()' is like a post-request-body input instead of 'get' from 'query()'
   // Force API endpoint to run at runtime with zod (TypeScript is buildtime) and when passing an object, it needs to have an id property of type string. API will throw an error if doesn't come true & can't call endpoint
   deleteFiles: privateProcedure
     .input(z.object({ id: z.string() }))

@@ -52,4 +52,6 @@ model File {
   // Prisma added these two lines in relatioin when added "File File[]" below when using Prettier
   User   User?   @relation(fields: [userId], references: [id])
   userId String?
+
+  @@index([userId])
 }
