@@ -7,10 +7,14 @@ import { Button } from "./ui/button";
 import Dropzone from "react-dropzone"; // Not destructure anyhything
 import { Cloud, File } from "lucide-react";
 import { Progress } from "./ui/progress";
+import { useUploadThing } from "@/lib/uploadthing";
 
 const UploadDropzone = () => {
   const [isUploading, setIsUploading] = useState<boolean>(true);
   const [uploadProgress, setUploadProgress] = useState<number>(0)
+
+  // Returns a Promise of object or undefined so can await this action (further down in the code)
+  const { startUpload } = useUploadThing("pdfUploader")
 
 //   Determinate Progress bar - Don't have access to an actual progress. Can define how it skips (in increments) and once done uploading, can skip to 100. Skip in increment since unsure in whatever percentage of choice but if stuck or not complement by the increment, progress bar will stay at 95% until fully complete.
 
@@ -34,12 +38,17 @@ const UploadDropzone = () => {
   return (
     <Dropzone
       multiple={false}
-      onDrop={(acceptedFiles) => {
+      onDrop={async (acceptedFiles) => {
         setIsUploading(true)
 
         const progressInterval = startSimulatedProgress()
 
-        // Hanlde File uploading
+        // Hanlde File uploading from uploadThing
+        const res = await startUpload(acceptedFiles)
+
+        if(!res) {
+          
+        }
 
         clearInterval(progressInterval) // Resetting after done, clear the interval
         setUploadProgress(100) // Done uploading
