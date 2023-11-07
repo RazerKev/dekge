@@ -111,8 +111,9 @@ const UploadDropzone = () => {
           className="border h-64 m-4 border-dashed border-gray-300 rounded-xl"
         >
           <div className="flex items-center justify-center h-full w-full">
-            <label
-              htmlFor="dropzone-file"
+            {/* Dropzone should be wrapped in a "div" instead of "lable" to prevent react-dropzone opening file manager 2-3 times */}
+            <div
+              // htmlFor="dropzone-file"
               className="flex flex-col items-center justify-center w-full h-full rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
             >
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -139,9 +140,7 @@ const UploadDropzone = () => {
                   <Progress
                     // Dynamic indicatorColor with '{}'
                     indicatorColor={
-                      uploadProgress === 100 
-                      ? 'bg-green-500' 
-                      : '' // empty string to keep defaults remain for 'progress' component
+                      uploadProgress === 100 ? "bg-green-500" : "" // empty string to keep defaults remain for 'progress' component
                     }
                     value={uploadProgress}
                     className="h-1 w-full bg-zinc-200"
@@ -162,7 +161,7 @@ const UploadDropzone = () => {
                 id="dropzone-file"
                 className="hidden"
               />
-            </label>
+            </div>
           </div>
         </div>
       )}
@@ -183,7 +182,7 @@ const UploadButton = () => {
       }}
     >
       <DialogTrigger onClick={() => setIsOpen(true)} asChild>
-        {/* 'asChild' makes a custom button as not DialogTrigger inherited. The Button below is main/active*/}
+        {/* 'asChild' makes a custom button as not DialogTrigger inherited. The Button below is main/active */}
         <Button>Upload PDF</Button>
       </DialogTrigger>
 
