@@ -1,6 +1,12 @@
 "use client";
 
-import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  RotateCw,
+  Search,
+} from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
 
 // Both imports from react-pdf doc
@@ -22,27 +28,49 @@ import { z } from "zod";
 // To seamlessly integrate external validation library
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
-import { DropdownMenu, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+
+// Combat Zooming pdf breaking website
+import SimpleBar from "simplebar-react";
+import PdfFullScreen from "./PdfFullScreen";
+import { render } from "react-dom";
 
 // WEB WORKER From react-pdf doc but slightly modified. This part manually sets the URL of the worker script from a CDN and do not have to worry about copying or bundling the script yourself (also benefit from caching & performance of CDN). This is for not direct access to build folder or want to use different version of pdf.worker.js.
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
 interface PdfRendererProps {
-  // url property received from dynamic fileid route is declared as a string and can be passed in.
+  // url property received from dynamic fileid route is declared as a type string and can be passed in.
   url: string;
 }
 
-// '{url}' prop is accessable & can be destructure from the dynamic route of '../app/dashboard/[fileid]/page.tsx'
+// '{url}' prop is accessible & can be destructure from the dynamic route of '../app/dashboard/[fileid]/page.tsx'
 
 // PdfRenderProps can be named anything but created interface with this name.
 const PdfRenderer = ({ url }: PdfRendererProps) => {
   const { toast } = useToast();
 
-  // State to hold and know the page number of pdf. At first undefinded and then once pdf render, total page # can be obtained
+  // State to hold and know the page number of pdf. At first undefined and then once pdf render, total page # can be obtained
   const [numPages, setNumPages] = useState<number>();
 
   // Keep track of the page currently on (currently set as 1 by default)
   const [currPage, setCurrPage] = useState<number>(1);
+
+  // Scaling PDF Document
+  const [scale, setScale] = useState<number>(1);
+
+  // Setting up the rotation of Document
+  const [rotation, setRotation] = useState<number>(0);
+
+  // Keeping track of the scale of the page as a number or null
+  const [renderedScale, setRenderedScale] = useState<number | null>(null);
+
+  // The "isLoading" is derive from renderedScale. If there is a mismatch when changing the scale, then that can be determined that rendering a new page is in progress.
+  const isLoading = renderedScale !== scale;
 
   // Schema Validation Library - Zod installed earlier when installing tRPC
   const CustomPageValidator = z.object({
@@ -99,6 +127,8 @@ const PdfRenderer = ({ url }: PdfRendererProps) => {
             onClick={() => {
               // To ensure the page does not go below 1 (0 or negative number)
               setCurrPage((prev) => (prev - 1 > 1 ? prev - 1 : 1));
+              // Setting the value for the page field when increment or decrement. Value set to "page" input
+              setValue("page", String(currPage - 1));
             }}
             variant="ghost"
             aria-label="previous page"
@@ -112,13 +142,13 @@ const PdfRenderer = ({ url }: PdfRendererProps) => {
               {...register("page")}
               className={cn(
                 "w-12 h-8",
-                errors.page && "focus-visible:ring-red-500"
+                errors.page && "focus-visible:ring-red-500" // Class name applied if there's error on page
               )}
               // When press 'enter', will want the page to apply pg #.
               onKeyDown={(e) => {
                 // 'e' is the event
                 if (e.key === "Enter") {
-                  console.log("Success!")
+                  console.log("Success!");
                   handleSubmit(handlePageSubmit)();
                 }
               }}
@@ -140,6 +170,8 @@ const PdfRenderer = ({ url }: PdfRendererProps) => {
               setCurrPage((prev) =>
                 prev + 1 > numPages! ? numPages! : prev + 1
               );
+              // Setting the value for the page field when increment or decrement. Value set to "page" input
+              setValue("page", String(currPage + 1));
             }}
             variant="ghost"
             aria-label="next page"
@@ -150,42 +182,105 @@ const PdfRenderer = ({ url }: PdfRendererProps) => {
 
         <div className="space-x-2">
           <DropdownMenu>
-            <DropdownMenuTrigger>
-              
+            {/* To not have two buttons, pass 'asChild' property and Button is the one btn */}
+            <DropdownMenuTrigger asChild>
+              <Button className="gap-1.5" aria-label="zoom" variant="ghost">
+                <Search className="h-4 w-4" />
+                {scale * 100}%<ChevronDown className="h-3 w-3 opacity-50" />
+              </Button>
             </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onSelect={() => setScale(1)}>
+                100%
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setScale(1.5)}>
+                150%
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setScale(2)}>
+                200%
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setScale(2.5)}>
+                250%
+              </DropdownMenuItem>
+            </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Set the rotation to 90 deg per click. */}
+          <Button
+            onClick={() => setRotation((prev) => prev + 90)}
+            variant="ghost"
+            aria-label="rotate 90 degrees"
+          >
+            <RotateCw className="h-4 w-4" />
+          </Button>
+
+          {/* Custom Component for full screen */}
+          {/* Get the "url" from prop passed in earlier and passed in into the "PdfFullScreen" file with "fileUrl" that was created in that component */}
+          <PdfFullScreen fileUrl={url} />
         </div>
       </div>
+
       {/* PDF Page Render */}
       <div className="flex-1 w-full max-h-screen">
-        {/* This <div> below is important in making the pdf fit the page. The 'ref' is linked to 'useResizeDetector' hook and now get the width saved inside the width constant which can be used to determine the width of the <Page /> below. */}
-        <div ref={ref}>
-          {/* <Document></Document> is from PDF Library. 'file' is the url that want to be rendered out. */}
-          <Document
-            loading={
-              <div className="flex justify-center">
-                <Loader2 className="my-24 h-6 w-6 animate-spin" />
-              </div>
-            }
-            // Display an error if there's one (have to think of all possible edge cases)
-            onLoadError={() => {
-              toast({
-                title: "Error loading PDF",
-                description: " Please try again later",
-                variant: "destructive",
-              });
-            }}
-            // For getting total page #
-            onLoadSuccess={({ numPages }) => {
-              setNumPages(numPages);
-            }}
-            file={url}
-            className="max-h-full"
-          >
-            {/* If we have the width, use the width, if not, set it to 1. width is obtained from '{ref}' div tag earlier. */}
-            <Page width={width ? width : 1} pageNumber={currPage} />
-          </Document>
-        </div>
+        {/* SimpleBar provides support and stability for zooming into pdf page. Ensures pdf never gets bigger than it can be */}
+        <SimpleBar autoHide={false} className="max-h-[calc(100vh-10rem)]">
+          {/* This <div> below is important in making the pdf fit the page. The 'ref' is linked to 'useResizeDetector' hook and now get the width saved inside the width constant which can be used to determine the width of the <Page /> below. */}
+          <div ref={ref}>
+            {/* <Document></Document> is from PDF Library. 'file' is the url that want to be rendered out. */}
+            <Document
+              loading={
+                <div className="flex justify-center">
+                  <Loader2 className="my-24 h-6 w-6 animate-spin" />
+                </div>
+              }
+              // Display an error if there's one (have to think of all possible edge cases)
+              onLoadError={() => {
+                toast({
+                  title: "Error loading PDF",
+                  description: " Please try again later",
+                  variant: "destructive",
+                });
+              }}
+              // For getting total page #
+              onLoadSuccess={({ numPages }) => {
+                setNumPages(numPages);
+              }}
+              file={url}
+              className="max-h-full"
+            >
+              {/* If we have the width, use the width, if not, set it to 1. width is obtained from '{ref}' div tag earlier. */}
+              {/* Optimize: Fixing the white space before page loads using states. Problem was detected when zooming into pages Conditionally rendering old page while keeping new page loading. */}
+              {/* If "isLoading" and "renderedScale" is true and exists, render first page, else render null. */}
+              {isLoading && renderedScale ? (
+                <Page
+                  width={width ? width : 1}
+                  pageNumber={currPage}
+                  scale={scale}
+                  rotate={rotation}
+                  key={"@" + renderedScale}
+                />
+              ) : null}
+              {/* The Page component is shown when loading "isLoading" */}
+              <Page
+                // Use "cn()" since we are conditionally applying a class name "hidden" property
+                className={cn(isLoading ? "hidden" : "")}
+                width={width ? width : 1}
+                pageNumber={currPage}
+                scale={scale}
+                rotate={rotation}
+                // Give it certain identity. Composite key (something plus another thing).
+                key={"@" + scale}
+                loading={
+                  <div className="flex justify-center">
+                    <Loader2 className="my-24 h-6 w-6 animate-spin" />
+                  </div>
+                }
+                // From ReactPDF Library - update render scale after success, when page is rendered and loading is finished.
+                onRenderSuccess={() => setRenderedScale(scale)}
+              />
+            </Document>
+          </div>
+        </SimpleBar>
       </div>
     </div>
   );
