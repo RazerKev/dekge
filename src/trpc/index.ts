@@ -46,6 +46,26 @@ export const appRouter = router({
     });
   }),
 
+  // API Endpoint - Getting File UploadStatus from the "core.ts", "onUploadComplete" for the ChatInput loading state. Need certain POST body as the input
+  getFileUploadStatus: privateProcedure
+    .input(z.object({ fileId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      // Find a file and check the status of the file upload
+      const file = await db.file.findFirst({
+        // Find file 'where' the id is the "input.fileid" from "input" and "fileid" a couple lines above
+        // In order to use "input" below, we need to first import and pass it as prop
+        where: {
+          id: input.fileId,
+          userId: ctx.userId, // userId matches the login user
+        },
+      });
+      // After finding the file, return status
+      // Return "status" as a "const" for TypeScript to know "PENDING" is one of the valid states the file can be in based on the "enum UploadStatus" in "\prisma\schema.prisma" and is to be exactly the PENDING string (so use "as const").
+      if (!file) return { status: "PENDING" as const };
+
+      return { status: file.uploadStatus };
+    }),
+
   // API Endpoint, getFile: getting info of a file. Checking if the input being obtained is an object schema and if the key for checking the database is a string.
   // For the Polling Approach backend (API Endpoint)
   getFile: privateProcedure
@@ -61,7 +81,7 @@ export const appRouter = router({
       });
       if (!file) throw new TRPCError({ code: "NOT_FOUND" }); //404 Error
 
-      return file
+      return file;
     }),
 
   // Another API Endpoint - Deleting files from the trashcan button. 'input()' is like a post-request-body input instead of 'get' from 'query()'

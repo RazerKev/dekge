@@ -20,7 +20,7 @@ const isAuth = middleware(async (option) => {
   }
 
   return option.next({
-    // Context, 'ctx', allows to pass any value fom this middlware directly into API that uses the private procedure
+    // Context, 'ctx', allows to pass any value fom this middleware directly into API that uses the private procedure
     ctx: {
       userId: user.id,
       user,

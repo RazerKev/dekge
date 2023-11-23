@@ -17,7 +17,7 @@ const Dashboard = () => {
 
   // Force invalidate and refresh the data - useful for having user not refresh entire page
   // NOTE - The hook 'useContext' was renamed to 'useUtils' until Version 10.41.0 (and is still aliased for foreseeable future) - Based on tRPC doc
-  const utils = trpc.useUtils(); // Will be call inside 'trpc.deleteFiles.useMutation()' below 'useUtils' gives you access to helpers that let you managed cahed data of queries (gives access yo the 'invalidate' helper)
+  const utils = trpc.useUtils(); // Will be call inside 'trpc.deleteFiles.useMutation()' below 'useUtils' gives you access to helpers that let you managed cached data of queries (gives access to the 'invalidate' helper)
 
   // data will be renamed to 'files'
   // Two lines of code below is using a client side
