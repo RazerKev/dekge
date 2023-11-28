@@ -19,7 +19,9 @@ model User {
   email String @unique
 
   // Each User having multiple Files
-  File File[] // Each user can have multiple files in Array of files
+  File    File[] // Each user can have multiple files in Array of files
+  // Each user can send a bunch of message so a message array
+  Message Message[]
 
   // Stripe Part for each user
   stripeCustomerId       String?   @unique @map(name: "stripe_customer_id") // Optional with '?' b/c not every user will be a customer
@@ -43,8 +45,9 @@ model File {
   uploadStatus UploadStatus @default(PENDING)
 
   // Each file will contain a URL
-  url String
-  key String
+  url      String
+  key      String
+  messages Message[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -54,4 +57,21 @@ model File {
   userId String?
 
   @@index([userId])
+}
+
+// Message model for "src\app\api\message\route.ts" for the user
+model Message {
+  id   String @id @default(cuid())
+  // Each message has a text
+  text String @db.Text()
+
+  // Differentiate between user messages and AI answers
+  isUserMessage Boolean
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  User      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+  File      File?    @relation(fields: [fileId], references: [id])
+  fileId    String?
 }

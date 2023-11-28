@@ -38,7 +38,6 @@ import {
 // Combat Zooming pdf breaking website
 import SimpleBar from "simplebar-react";
 import PdfFullScreen from "./PdfFullScreen";
-import { render } from "react-dom";
 
 // WEB WORKER From react-pdf doc but slightly modified. This part manually sets the URL of the worker script from a CDN and do not have to worry about copying or bundling the script yourself (also benefit from caching & performance of CDN). This is for not direct access to build folder or want to use different version of pdf.worker.js.
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
@@ -117,7 +116,7 @@ const PdfRenderer = ({ url }: PdfRendererProps) => {
 
   return (
     <div className="w-full bg-white rounded-md shadow flex flex-col items-center">
-      {/* Top bar functionallity (full screen, rotate, zoom etc.) */}
+      {/* Top bar functionality (full screen, rotate, zoom etc.) */}
       <div className="h-14 w-full border-b border-zinc-200 flex items-center justify-between px-2">
         <div className="flex items-center gap-1.5">
           {/* Button to navagiate down a page. NOTE: "aria-label" is added for screen reader and people with visualimpairment for example can see what button does with label added. */}

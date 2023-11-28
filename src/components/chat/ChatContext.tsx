@@ -32,7 +32,7 @@ interface Props {
 export const ChatContextProvider = ({ fileId, children }: Props) => {
   // Responsible with all the logic in sending and receiving msgs
   const [message, setMessage] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const { toast } = useToast();
 
@@ -66,7 +66,7 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
     setMessage(e.target.value); // Get the value of HTML element (text area) when user enters text and then update the "setMessage" state ("e.target.value" is built-in property to get value)
   };
 
-  // addMessage function
+  // addMessage function - send a message over to "src\app\api\message\route.ts" API endpoint
   const addMessage = () => sendMessage({ message });
 
   return (
