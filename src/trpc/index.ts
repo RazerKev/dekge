@@ -3,6 +3,7 @@ import { privateProcedure, publicProcedure, router } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { db } from "@/db";
 import { z } from "zod";
+import { INFINITE_QUERY_LIMIT } from "@/config/infinite-query";
 
 export const appRouter = router({
   // Added export
@@ -45,6 +46,27 @@ export const appRouter = router({
       },
     });
   }),
+
+  // API Endpoint - getFileMessages -fetching all the messages that was sent for a specific file for "src\components\chat\Messages.tsx". Private Procedure so have to be logged in
+  getFileMessages: privateProcedure
+    .input(
+      // Expecting an object and three things:
+      z.object({
+        limit: z.number().min(1).max(100).nullish(), // "nullish()" means it does not have to be pass
+        // "cursor:" determines the infinite queries. On page load, loads X number of messages and as we scroll, load more messages. "cursor" determines how to find the next X set of messages
+        cursor: z.string().nullish(),
+        // "fileId" is to know which file to fetch the messages for
+        fileId: z.string(),
+      })
+    )
+    // Fetch all the messages we want to display in chat window. Must destructure "ctx" and "input"
+    .query(({ ctx, input }) => {
+      // Ensure the files are owned by the user are going to be fetched so destructure from the ctx
+      const {userId} = ctx
+      const {fileId, cursor} = input
+      // Limit is passed in directly, if not there's always a fallback value (defining central query limit [done through config file, "src\config\infinite-query.ts"])
+      const limit = input.limit ?? INFINITE_QUERY_LIMIT;
+    }),
 
   // API Endpoint - Getting File UploadStatus from the "core.ts", "onUploadComplete" for the ChatInput loading state. Need certain POST body as the input
   getFileUploadStatus: privateProcedure

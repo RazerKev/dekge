@@ -41,7 +41,7 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
 
   const { mutate: sendMessage } = useMutation({
     // Have to passed mutation function since not using tRPC
-    // Destructure message and then tell TypeScript what type message will be (type string)
+    // Destructure "message" and then tell TypeScript what type message will be (type string)
     mutationFn: async ({ message }: { message: string }) => {
       // POST fetch request go to endpoint. Created in the "api" folder
       const response = await fetch("/api/message", {
