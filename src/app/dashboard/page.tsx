@@ -11,7 +11,7 @@ const Page = async () => {
   // Make sure the user is logged in 
   if (!user || !user.id) redirect('/auth-callback?origin=dashboard');
 
-  // Note - user doesn't exists first time, they're sent to auth-callback and see account being created msg but if yiu're logged in, you'll never see the message again.
+  // Note - user doesn't exists first time, they're sent to auth-callback and see account being created msg but if you're logged in, you'll never see the message again.
   const dBUser = await db.user.findFirst({
     where: {
       id: user.id //id in database == user.id that was logged in

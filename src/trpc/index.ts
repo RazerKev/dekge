@@ -47,7 +47,7 @@ export const appRouter = router({
     });
   }),
 
-  // API Endpoint - getFileMessages -fetching all the messages that was sent for a specific file for "src\components\chat\Messages.tsx". Private Procedure so have to be logged in
+  // API Endpoint - getFileMessages - fetching all the messages that was sent for a specific file for "src\components\chat\Messages.tsx". Private Procedure so have to be logged in
   getFileMessages: privateProcedure
     .input(
       // Expecting an object and three things:
@@ -60,12 +60,52 @@ export const appRouter = router({
       })
     )
     // Fetch all the messages we want to display in chat window. Must destructure "ctx" and "input"
-    .query(({ ctx, input }) => {
+    .query(async ({ ctx, input }) => {
       // Ensure the files are owned by the user are going to be fetched so destructure from the ctx
-      const {userId} = ctx
-      const {fileId, cursor} = input
-      // Limit is passed in directly, if not there's always a fallback value (defining central query limit [done through config file, "src\config\infinite-query.ts"])
+      const { userId } = ctx;
+      const { fileId, cursor } = input;
+      // Limit is passed in directly, if not there's always a fallback value, "INFINITE_QUERY_LIMIT" (defining central query limit [done through config file, "src\config\infinite-query.ts"])
       const limit = input.limit ?? INFINITE_QUERY_LIMIT;
+
+      const file = await db.file.findFirst({
+        where: {
+          id: fileId, // where id of file matches with passed in fileId
+          userId, // Only owned by the user so can't get anyone else file
+        },
+      });
+      if (!file) throw new TRPCError({ code: "NOT_FOUND" });
+
+      // Fetch the messages that we want to show  for this file that were sent in the past from the user
+      const messages = await db.message.findMany({
+        // Only want to take message of limit (never take more than the limit)
+        take: limit + 1, // "+ 1" is important to determine if we scroll up from where we want to fetch the next messages. (Ex. 10 as limit but + 1 makes it 11 messages and very last one acts as cursor so when scroll up, it knows the next set of messages to fetch)
+        where: {
+          fileId
+        },
+        orderBy: {
+          createdAt: "desc"
+        },
+        // If passed in cursor into API route, then that'll be ID of cursor. If we don't passed in the cursor then it's undefined
+        cursor: cursor ? {id: cursor} : undefined,
+        select: {
+          id: true,
+          isUserMessage: true,
+          createdAt: true,
+          text: true
+        }
+      })
+      // Determine the logic of the next cursor for the message
+      let nextCursor: typeof cursor | undefined = undefined // declare as let since it is being mutated
+      // If there's more messages in the database
+      if(messages.length > limit) {
+        // From the "+ 1", that items is popped and return. nextItem is will the next item to start fetching from
+        const nextItem = messages.pop()
+        nextCursor = nextItem?.id // Only care about the id property of it 
+      }
+      return {
+        messages,
+        nextCursor // Know now where to start fetching if scroll up later.
+      }
     }),
 
   // API Endpoint - Getting File UploadStatus from the "core.ts", "onUploadComplete" for the ChatInput loading state. Need certain POST body as the input
