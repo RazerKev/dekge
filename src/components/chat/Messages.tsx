@@ -2,6 +2,7 @@ import { trpc } from "@/app/_trpc/client";
 import { INFINITE_QUERY_LIMIT } from "@/config/infinite-query";
 import { Loader2, MessageSquare } from "lucide-react";
 import Skeleton from "react-loading-skeleton";
+import Message from "./Message";
 
 interface MessageProps {
   fileId: string;
@@ -35,7 +36,7 @@ const Messages = ({ fileId }: MessageProps) => {
     createdAt: new Date().toISOString(),
     id: "loading-message", // Make something up that's unique
     isUserMessage: false, // Loading state to be true for AI and not the User.
-    // Render a JSX Element, not a string aas text
+    // Renders a JSX Element; not a string as text
     text: (
       <span className="flex h-full items-center justify-center">
         <Loader2 className="h-4 w-4 animate-spin" />
@@ -59,11 +60,24 @@ const Messages = ({ fileId }: MessageProps) => {
             combinedMessages[index - 1]?.isUserMessage ===
             combinedMessages[index]?.isUserMessage;
           if (index === combinedMessages.length - 1) {
-            // Return out each Message
-            return <Messages />;
-          } else return;
-          // Not rendering out the last message
-          <Messages />;
+            // Return out each Message. Since we're mapping over elements of the message, will need a key
+            return (
+              <Message
+                // The message instance that is currently being mapped over (element of the array)
+                message={message}
+                isNextMessageSamePerson={isNextMessageSamePerson}
+                key={message.id}
+              />
+            );
+          } else
+            return (
+              // Not rendering out the last message
+              <Message
+                message={message}
+                isNextMessageSamePerson={isNextMessageSamePerson}
+                key={message.id}
+              />
+            );
         })
       ) : // Loading and there's no messages yet or haven't been loaded
       isLoading ? (
@@ -74,7 +88,7 @@ const Messages = ({ fileId }: MessageProps) => {
           <Skeleton className="h-16" />
         </div>
       ) : (
-        // If there's nothing to show (no messages). User is ready to msg their PDF file 
+        // If there's nothing to show (no messages). User is ready to msg their PDF file
         <div className="flex-1 flex flex-col items-center justify-center gap-2">
           <MessageSquare className="h-8 w-8 text-blue-500" />
           <h3 className="font-semibold text-xl">You&apos;re all set!</h3>

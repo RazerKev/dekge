@@ -20,7 +20,7 @@ const ChatWrapper = ({ fileId }: ChatWrapperProps) => {
     },
     {
       // Passes in "data". Whatever is returned from API Route is going to be accessible below as "data" which is "{ status: file.uploadStatus }".
-      // Implicitly Return (no "{}" in "... => {}")
+      // Implicitly Return (no "{}" in "(data) => {}")
       refetchInterval: (data) =>
         // Want to poll until there's a certain status
 
