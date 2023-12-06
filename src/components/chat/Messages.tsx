@@ -45,10 +45,10 @@ const Messages = ({ fileId }: MessageProps) => {
   };
 
   // Combined Message Constant - send a message later, display a loading state message.
-  const combinedMessages = {
+  const combinedMessages = [
     ...(true ? [loadingMessage] : []), // spread in the message in mocked true state
     ...(messages ?? []), // empty array if null or undefined ("??") for spread messages; nullish coalescing operator.
-  };
+  ];
 
   return (
     <div className="flex max-h-[calc(100vh-3.5rem-7rem)] border-zinc-200 flex-1 flex-col-reverse gap-4 p-3 overflow-y-auto scrollbar-thumb-blue scrollbar-thumb-rounded scrollbar-track-blue-lighter scrollbar-w-2 scrolling-touch">

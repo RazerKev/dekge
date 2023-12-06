@@ -1,4 +1,5 @@
 // This ChatContext "Providers" wraps the components together.
+// Process the message, handle loading error states, etc...
 
 // Technically isn't a component but should be located with other chat files
 import React, { ReactNode, createContext, useState } from "react";
@@ -33,6 +34,8 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
   // Responsible with all the logic in sending and receiving msgs
   const [message, setMessage] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // For optimistic updates
 
   const { toast } = useToast();
 
