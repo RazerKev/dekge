@@ -3,12 +3,17 @@ import { INFINITE_QUERY_LIMIT } from "@/config/infinite-query";
 import { Loader2, MessageSquare } from "lucide-react";
 import Skeleton from "react-loading-skeleton";
 import Message from "./Message";
+import { useContext } from "react";
+import { ChatContext } from "./ChatContext";
 
 interface MessageProps {
   fileId: string;
 }
 
 const Messages = ({ fileId }: MessageProps) => {
+  // Need to handle loading state for the user message for it to be sent instantly from "src\components\chat\ChatContext.tsx"
+  const { isLoading: isAiThinking } = useContext(ChatContext);
+
   // Get all the messages here that we have to display and render it out one by one in the ChatWindow. Must first fetch the data from the database
 
   // Need to create an endpoint to handle that
@@ -46,7 +51,7 @@ const Messages = ({ fileId }: MessageProps) => {
 
   // Combined Message Constant - send a message later, display a loading state message.
   const combinedMessages = [
-    ...(true ? [loadingMessage] : []), // spread in the message in mocked true state
+    ...(isAiThinking ? [loadingMessage] : []), // spread in the message in mocked true state
     ...(messages ?? []), // empty array if null or undefined ("??") for spread messages; nullish coalescing operator.
   ];
 
