@@ -133,6 +133,107 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
           previousMessages?.pages.flatMap((page) => page.messages) ?? [], // Return empty array if null or undefined (??)
       };
     },
+    // Get a response back from API that will contain readable stream that can be put into the message as we get it to have real-time feeling
+    // "stream" data of bit by bit is available after successful fetch request of msgs
+    onSuccess: async (stream) => {
+      setIsLoading(false); // AI should not be loading
+
+      // Stream could be no so handle this edge case
+      if (!stream) {
+        return toast({
+          title: "There was a problem sending this message",
+          description: "Please refresh this page and try again",
+          variant: "destructive",
+        });
+      }
+
+      // Can assume stream exists. Creates a reader and locks the stream to it.
+      const reader = stream.getReader();
+      // Decoded it since it's encoded
+      const decoder = new TextDecoder();
+      // Keep track if we're done
+      let done = false;
+
+      // Want the response & accumulate the response once we're done
+      let accResponse = "";
+
+      // Read the content of the stream we get back in real time
+      while (!done) {
+        // Read the stream first by destructuring "value" & "done". If chuck is available, promise will be fulfilled with an object of "{ value: theChunk, done: false }"; if stream become closed, promise will be fulfilled with an object of "{ value: undefined, done: true }". "done" is true if stream has already given you all its data. "value" is undefined when done is true.
+        const { value, done: doneReading } = await reader.read(); // Returns a Promise
+        done = doneReading;
+
+        // Get string content of this stream of chunk that we are mapping over. Actual string that AI gives us that we now want to add to msgs & to make it show in real time.
+        const chunkValue = decoder.decode(value);
+
+        // Accumulated Response accumulated with chunk values decoded
+        accResponse += chunkValue;
+
+        // Append chunk to the actual message so message is in chat in real time
+        // Use "setInfiniteData()" so we can add to the data that we can see in chat window
+
+        // NOTE: This is all being streamed in, in real time, letter by letter as the chunks come in. Need new reference for each time we update the infinite data which chunk value for React to know that it should display it. Can't do it with the same reference, wouldn't work.
+        utils.getFileMessages.setInfiniteData(
+          {fileId, limit: INFINITE_QUERY_LIMIT},
+          // Receiving the old data
+          (old) => {
+            // No data found
+            if (!old) return { pages: [], pageParams: [] };
+
+            // "pages.some" returns a boolean. For each page we get from the old data, check for any page, for any message if there is a message with ID of "ai-response" if there is one (which will be last one, bottom of page after user's msg), then we will not add a new one. Once we send user's msg, AI response will be added to chat window in real-time. Check if each 'chunk' that we add to it, if there's a message, and if there is, not going to create a second new message but instead, add to it as we get the chunk value. If there isn't, then we're going to create one for the very first chunk (there will always be a message)
+            let isAiResponseCreated = old.pages.some((page) => page.messages.some((message) => message.id === "ai-response")
+            )
+
+            // map over the old pages first
+            let updatedPages = old.pages.map((page) => {
+              // Check if this is the first page which contains last msg since order of entire msg is reverse.
+              if (page === old.pages[0]) {
+                let updatedMessages;
+
+                // If AI Response is not yet created, then create it, once
+                if (!isAiResponseCreated) {
+                  // Create a new reference for each entry; important for react differing algo to pick up the change later so we can see it on screen
+                  updatedMessages = [
+                    // Array with msg object
+                    // Create a new message
+                    {
+                      createdAt: new Date().toISOString(),
+                      id: "ai-response", // hardcoded "ai-response" must match
+                      text: accResponse,
+                      isUserMessage: false,
+                    },
+                    // Append all the other messages that was there before with spread "..."
+                    ...page.messages,
+                  ];
+                } else {
+                  // If there is already an AI Response, then add to existing response (chunk)
+                  updatedMessages = page.messages.map((message) => {
+                    if (message.id === "ai-response") {
+                      return {
+                        // Return the message properties that were there before by spreading it in the msg but change text to accumulated response ("accResponse")
+                        ...message,
+                        text: accResponse, // return everything but changed text, appending it in real-time
+                      };
+                    }
+                    // If not AI response, return message unchanged
+                    return message;
+                  });
+                }
+                return {
+                  ...page, // Keeping the properties
+                  // Only override the messages that's updated from above
+                  messages: updatedMessages,
+                };
+              }
+              // Returning the other pages that will stay the same; only the first page with the last 10 or 11 msg set from "src\config\infinite-query.ts" option will be updated
+              return page;
+            })
+            // Spread in all old values and override the pages to be the updated pages
+            return {...old, pages: updatedPages}
+          }
+        );
+      }
+    },
     onError: (_, __, context) => {
       // Something went wrong so put the message back onto text box
       setMessage(backupMessage.current);
