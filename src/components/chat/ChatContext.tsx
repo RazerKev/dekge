@@ -162,12 +162,15 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
         // Read the stream first by destructuring "value" & "done". If chuck is available, promise will be fulfilled with an object of "{ value: theChunk, done: false }"; if stream become closed, promise will be fulfilled with an object of "{ value: undefined, done: true }". "done" is true if stream has already given you all its data. "value" is undefined when done is true.
         const { value, done: doneReading } = await reader.read(); // Returns a Promise
         done = doneReading;
+        console.log("The value destructure: ", value);
 
         // Get string content of this stream of chunk that we are mapping over. Actual string that AI gives us that we now want to add to msgs & to make it show in real time.
         const chunkValue = decoder.decode(value);
+        console.log("Chuck Value: ", chunkValue);
 
         // Accumulated Response accumulated with chunk values decoded
         accResponse += chunkValue;
+        console.log("Accumulated Response: ", accResponse);
 
         // Append chunk to the actual message so message is in chat in real time
         // Use "setInfiniteData()" so we can add to the data that we can see in chat window
@@ -177,6 +180,7 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
           {fileId, limit: INFINITE_QUERY_LIMIT},
           // Receiving the old data
           (old) => {
+            // console.log("Old Page: ", old);
             // No data found
             if (!old) return { pages: [], pageParams: [] };
 
@@ -188,9 +192,12 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
             let updatedPages = old.pages.map((page) => {
               // Check if this is the first page which contains last msg since order of entire msg is reverse.
               if (page === old.pages[0]) {
+                // console.log("First page: ", page);
+                // console.log("Old Pages, index [0]: ", old.pages[0]);
                 let updatedMessages;
 
                 // If AI Response is not yet created, then create it, once
+                // console.log("Did AI Response Created: ", isAiResponseCreated);
                 if (!isAiResponseCreated) {
                   // Create a new reference for each entry; important for react differing algo to pick up the change later so we can see it on screen
                   updatedMessages = [
@@ -205,10 +212,13 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
                     // Append all the other messages that was there before with spread "..."
                     ...page.messages,
                   ];
+                  // console.log("Updated Messages: ", updatedMessages);
                 } else {
                   // If there is already an AI Response, then add to existing response (chunk)
                   updatedMessages = page.messages.map((message) => {
+                    // console.log("Mapping over each message: ", message);                                     
                     if (message.id === "ai-response") {
+                      // console.log("The message.id is === ai-response. Here's the message: ", message, " and text: ", accResponse);
                       return {
                         // Return the message properties that were there before by spreading it in the msg but change text to accumulated response ("accResponse")
                         ...message,
@@ -216,9 +226,11 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
                       };
                     }
                     // If not AI response, return message unchanged
+                    // console.log("1st return message unchanged: ", message);
                     return message;
                   });
                 }
+                // console.log("2nd return messages overridden: ", updatedMessages);
                 return {
                   ...page, // Keeping the properties
                   // Only override the messages that's updated from above
@@ -226,9 +238,11 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
                 };
               }
               // Returning the other pages that will stay the same; only the first page with the last 10 or 11 msg set from "src\config\infinite-query.ts" option will be updated
+              // console.log("3rd - return page", page);
               return page;
             })
             // Spread in all old values and override the pages to be the updated pages
+            // console.log("4th - final return: ", updatedPages);
             return {...old, pages: updatedPages}
           }
         );

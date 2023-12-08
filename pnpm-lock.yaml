@@ -11,6 +11,9 @@ dependencies:
   '@kinde-oss/kinde-auth-nextjs':
     specifier: ^1.8.23
     version: 1.8.23(react-dom@18.2.0)(react@18.2.0)
+  '@mantine/hooks':
+    specifier: ^7.3.1
+    version: 7.3.1(react@18.2.0)
   '@pinecone-database/pinecone':
     specifier: ^1.1.2
     version: 1.1.2
@@ -441,6 +444,14 @@ packages:
     transitivePeerDependencies:
       - encoding
       - zod
+    dev: false
+
+  /@mantine/hooks@7.3.1(react@18.2.0):
+    resolution: {integrity: sha512-pbbqPpVou/13xbt/dYYNphPpbDE2XfPN9mUHBoGZgv9FM8IkziNMIOo4PtNlqqqYsyp1lfQIQVKKT+DLZt1C8Q==}
+    peerDependencies:
+      react: ^18.2.0
+    dependencies:
+      react: 18.2.0
     dev: false
 
   /@mapbox/node-pre-gyp@1.0.11:

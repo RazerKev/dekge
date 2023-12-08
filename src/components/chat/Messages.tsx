@@ -3,8 +3,11 @@ import { INFINITE_QUERY_LIMIT } from "@/config/infinite-query";
 import { Loader2, MessageSquare } from "lucide-react";
 import Skeleton from "react-loading-skeleton";
 import Message from "./Message";
-import { useContext } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { ChatContext } from "./ChatContext";
+
+// Use this to check when and if the message is intersecting with top of viewport to load more pages
+import { useIntersection } from "@mantine/hooks";
 
 interface MessageProps {
   fileId: string;
@@ -55,6 +58,24 @@ const Messages = ({ fileId }: MessageProps) => {
     ...(messages ?? []), // empty array if null or undefined ("??") for spread messages; nullish coalescing operator.
   ];
 
+  // Assigning a ref to keep track of the div to load more msgs. Can tell TypeScript that this will be a "HTMLDivElement"
+  const lastMessageRef = useRef<HTMLDivElement>(null);
+
+  // From @mantine/hooks (DOC)
+  const { ref, entry } = useIntersection({
+    root: lastMessageRef.current,
+    threshold: 1
+  })
+
+  useEffect(() => {
+    if(entry?.isIntersecting) {
+      // If it's intersecting, load more messages above it
+      fetchNextPage()
+    }
+  }, 
+  // If one of these changes, then user in fact is going to re-initialize
+  [entry, fetchNextPage])
+
   return (
     <div className="flex max-h-[calc(100vh-3.5rem-7rem)] border-zinc-200 flex-1 flex-col-reverse gap-4 p-3 overflow-y-auto scrollbar-thumb-blue scrollbar-thumb-rounded scrollbar-track-blue-lighter scrollbar-w-2 scrolling-touch">
       {/* For each message, map them over but logic first; Two ternary operator (one nested inside the other). For "combinedMessages" if it exists and there is one message, map them over and display them all. Need the "index" to perform the infinite scrolling and to check if that is intersecting the viewpoint to then load more messages. Ref to last element on the screen needs to be attached to see if last element we're rendering */}
@@ -68,6 +89,8 @@ const Messages = ({ fileId }: MessageProps) => {
             // Return out each Message. Since we're mapping over elements of the message, will need a key
             return (
               <Message
+                // Know this is the last msg on the screen so can pass it as a Ref
+                ref={ref}
                 // The message instance that is currently being mapped over (element of the array)
                 message={message}
                 isNextMessageSamePerson={isNextMessageSamePerson}
