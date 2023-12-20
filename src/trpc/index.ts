@@ -4,9 +4,13 @@ import { TRPCError } from "@trpc/server";
 import { db } from "@/db";
 import { z } from "zod";
 import { INFINITE_QUERY_LIMIT } from "@/config/infinite-query";
+import { absoluteUrl } from "@/lib/utils";
+import { getUserSubscriptionPlan, stripe } from "@/lib/stripe";
+import { PLANS } from "@/config/stripe";
 
 export const appRouter = router({
   // Added export
+
   // Get request to the database to see if the user exists or not. With 'publicProcedure', anyone can query this API endpoint.
   authCallback: publicProcedure.query(async () => {
     const { getUser } = getKindeServerSession();
@@ -47,6 +51,62 @@ export const appRouter = router({
     });
   }),
 
+  // API Endpoint - createStripeSession - Create a new session for the user when they want to upgrade to pro plan. No input & can straight away call the input. Always redirect them to appropriate stripe session whether they're customer or not
+  createStripeSession: privateProcedure.mutation(async ({ ctx }) => {
+    const { userId } = ctx;
+
+    // Since we're on server-side with tRPC & API Endpoints, need "ABSOLUTE URL" and we can't use relative URL. Will have to create helper function that will help us do that so new code added "src\lib\utils.ts"
+    const billingUrl = absoluteUrl("/dashboard/billing"); // Always will return correct URL no matter where we're are
+
+    if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+    // Seeing database entries for user
+    const dbUser = await db.user.findFirst({
+      // Find the first user where id matches userId
+      where: {
+        id: userId,
+      },
+    });
+    // No database user, return error
+    if (!dbUser) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+    // If the user is already subscribe, take them to page where they can cancel or manage their subscriptions. If they're not, take them to a page to get them subscribe & directly pay
+    const subscriptionPlan = await getUserSubscriptionPlan();
+
+    // If on pro plan
+    if (subscriptionPlan.isSubscribed && dbUser.stripeCustomerId) {
+      // Send user to a management page where they can cancel or manage subscription
+      const stripeSesssion = await stripe.billingPortal.sessions.create({
+        customer: dbUser.stripeCustomerId,
+        return_url: billingUrl,
+      });
+      // Send back to the front-end to redirect user to. Hosted page Stripe provides under this URL
+      return { url: stripeSesssion.url };
+    }
+
+    // If statement above fails, they are not let subscribe so let have them subscribe
+    const stripeSesssion = await stripe.checkout.sessions.create({
+      success_url: billingUrl,
+      cancel_url: billingUrl,
+      payment_method_types: ["card", "paypal"],
+      mode: "subscription",
+      billing_address_collection: "auto",
+      line_items: [
+        {
+          // If plan name matches pro and exists optionally, get test mode API
+          // If in production, change the ending of "test" to "production"
+          price: PLANS.find((plan) => plan.name === "Pro")?.price.priceIds.test,
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        // Will be sent to webhook so we can make sure that we update data for correct user and so we enabled their plan and everything work for them
+        userId: userId,
+      },
+    });
+    return { url: stripeSesssion.url };
+  }),
+
   // API Endpoint - getFileMessages - fetching all the messages that was sent for a specific file for "src\components\chat\Messages.tsx". Private Procedure so have to be logged in
   getFileMessages: privateProcedure
     .input(
@@ -80,32 +140,32 @@ export const appRouter = router({
         // Only want to take message of limit (never take more than the limit)
         take: limit + 1, // "+ 1" is important to determine if we scroll up from where we want to fetch the next messages. (Ex. 10 as limit but + 1 makes it 11 messages and very last one acts as cursor so when scroll up, it knows the next set of messages to fetch)
         where: {
-          fileId
+          fileId,
         },
         orderBy: {
-          createdAt: "desc"
+          createdAt: "desc",
         },
         // If passed in cursor into API route, then that'll be ID of cursor. If we don't passed in the cursor then it's undefined
-        cursor: cursor ? {id: cursor} : undefined,
+        cursor: cursor ? { id: cursor } : undefined,
         select: {
           id: true,
           isUserMessage: true,
           createdAt: true,
-          text: true
-        }
-      })
+          text: true,
+        },
+      });
       // Determine the logic of the next cursor for the message
-      let nextCursor: typeof cursor | undefined = undefined // declare as let since it is being mutated
+      let nextCursor: typeof cursor | undefined = undefined; // declare as let since it is being mutated
       // If there's more messages in the database
-      if(messages.length > limit) {
+      if (messages.length > limit) {
         // From the "+ 1", that items is popped and return. nextItem is will the next item to start fetching from
-        const nextItem = messages.pop()
-        nextCursor = nextItem?.id // Only care about the id property of it 
+        const nextItem = messages.pop();
+        nextCursor = nextItem?.id; // Only care about the id property of it
       }
       return {
         messages,
-        nextCursor // Know now where to start fetching if scroll up later.
-      }
+        nextCursor, // Know now where to start fetching if scroll up later.
+      };
     }),
 
   // API Endpoint - Getting File UploadStatus from the "core.ts", "onUploadComplete" for the ChatInput loading state. Need certain POST body as the input

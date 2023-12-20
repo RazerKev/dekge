@@ -13,10 +13,11 @@ interface MessageProps {
 
 // To pass "refs" in React & allow it to be used inside components, use "forwardRef" with the TypeScript generic "HTMLDivElement" from "src\components\chat\Messages.tsx" and "MessageProps" declared
 const Message = forwardRef<HTMLDivElement, MessageProps>(
+  // Getting the "ref" from "Messages.tsx" and requires "forwardRef()" to be passed through
   ({ message, isNextMessageSamePerson }, ref) => {
     return (
       <div
-        // Need to pass in ref and have it declared at the top as the props to get it & for it to work from "Messages.tsx"
+        // Need to pass in ref and have it declared at the top as the props to get it & for it to work from "Messages.tsx"... Accepting the "ref" from the "Messages.tsx" component. 
         ref={ref}
         className={cn("flex items-end", {
           // Put the user message to the end if it's the user (Conditional Check)

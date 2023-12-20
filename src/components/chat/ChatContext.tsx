@@ -51,6 +51,7 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
   const { mutate: sendMessage } = useMutation({
     // Have to passed mutation function since not using tRPC
     // Destructure "message" and then tell TypeScript what type message will be (type string)
+    // Required by TanStack Query & "mutate" above passes to mutationFn as parm object
     mutationFn: async ({ message }: { message: string }) => {
       // POST fetch request go to endpoint. Created in the "api" folder
       const response = await fetch("/api/message", {
@@ -68,7 +69,7 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
 
       return response.body;
     },
-    // Gets called as soon message is sent
+    // Gets called as soon message is sent. Function will fire before the mutation function is fired and is passed the same variables the mutation function would receive
     onMutate: async ({ message }) => {
       // First create a backup if anything goes wrong for the message. Roll it back and put it back in the input. "current" is on React Document.
       backupMessage.current = message;
@@ -162,22 +163,22 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
         // Read the stream first by destructuring "value" & "done". If chuck is available, promise will be fulfilled with an object of "{ value: theChunk, done: false }"; if stream become closed, promise will be fulfilled with an object of "{ value: undefined, done: true }". "done" is true if stream has already given you all its data. "value" is undefined when done is true.
         const { value, done: doneReading } = await reader.read(); // Returns a Promise
         done = doneReading;
-        console.log("The value destructure: ", value);
+        // console.log("The value destructure: ", value);
 
         // Get string content of this stream of chunk that we are mapping over. Actual string that AI gives us that we now want to add to msgs & to make it show in real time.
         const chunkValue = decoder.decode(value);
-        console.log("Chuck Value: ", chunkValue);
+        // console.log("Chuck Value: ", chunkValue);
 
         // Accumulated Response accumulated with chunk values decoded
         accResponse += chunkValue;
-        console.log("Accumulated Response: ", accResponse);
+        // console.log("Accumulated Response: ", accResponse);
 
         // Append chunk to the actual message so message is in chat in real time
         // Use "setInfiniteData()" so we can add to the data that we can see in chat window
 
         // NOTE: This is all being streamed in, in real time, letter by letter as the chunks come in. Need new reference for each time we update the infinite data which chunk value for React to know that it should display it. Can't do it with the same reference, wouldn't work.
         utils.getFileMessages.setInfiniteData(
-          {fileId, limit: INFINITE_QUERY_LIMIT},
+          { fileId, limit: INFINITE_QUERY_LIMIT },
           // Receiving the old data
           (old) => {
             // console.log("Old Page: ", old);
@@ -185,8 +186,9 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
             if (!old) return { pages: [], pageParams: [] };
 
             // "pages.some" returns a boolean. For each page we get from the old data, check for any page, for any message if there is a message with ID of "ai-response" if there is one (which will be last one, bottom of page after user's msg), then we will not add a new one. Once we send user's msg, AI response will be added to chat window in real-time. Check if each 'chunk' that we add to it, if there's a message, and if there is, not going to create a second new message but instead, add to it as we get the chunk value. If there isn't, then we're going to create one for the very first chunk (there will always be a message)
-            let isAiResponseCreated = old.pages.some((page) => page.messages.some((message) => message.id === "ai-response")
-            )
+            let isAiResponseCreated = old.pages.some((page) =>
+              page.messages.some((message) => message.id === "ai-response")
+            );
 
             // map over the old pages first
             let updatedPages = old.pages.map((page) => {
@@ -216,7 +218,7 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
                 } else {
                   // If there is already an AI Response, then add to existing response (chunk)
                   updatedMessages = page.messages.map((message) => {
-                    // console.log("Mapping over each message: ", message);                                     
+                    // console.log("Mapping over each message: ", message);
                     if (message.id === "ai-response") {
                       // console.log("The message.id is === ai-response. Here's the message: ", message, " and text: ", accResponse);
                       return {
@@ -240,10 +242,10 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
               // Returning the other pages that will stay the same; only the first page with the last 10 or 11 msg set from "src\config\infinite-query.ts" option will be updated
               // console.log("3rd - return page", page);
               return page;
-            })
+            });
             // Spread in all old values and override the pages to be the updated pages
             // console.log("4th - final return: ", updatedPages);
-            return {...old, pages: updatedPages}
+            return { ...old, pages: updatedPages };
           }
         );
       }
@@ -275,7 +277,7 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
   const addMessage = () => sendMessage({ message });
 
   return (
-    // From React "createContext" docs. The ".Provider" lets you provide the context value to components. "value={}" is what to pass to all components reading the context inside the provider, no matter how deep
+    // From React "createContext" docs. The ".Provider" lets you provide the context value to components. "value={}" is what to pass to all components reading the context inside the provider, no matter how deep. Need ".Provider" for context to be applied and basically tells React "if any component (<Messages/> and <ChatInput/> from "src\components\chat\ChatWrapper.tsx") inside <ChatContext.Provider>...<ChatContext.Provider> asks for ChatContext, give them these values below."
     <ChatContext.Provider
       value={{
         addMessage,

@@ -18,7 +18,7 @@ const f = createUploadthing();
 export const ourFileRouter = {
   // Define as many FileRoutes as you like, each with a unique routeSlug
   pdfUploader: f({ pdf: { maxFileSize: "4MB" } })
-    // NOTE - Middlware will run when someone has requested to upload a file from the client. Chain request and this is middleware so will run & need to add code to make sure user is authenentcated to upload
+    // NOTE - Middleware will run when someone has requested to upload a file from the client. Chain request and this is middleware so will run & need to add code to make sure user is authenticated to upload
     .middleware(async ({ req }) => {
       const { getUser } = getKindeServerSession();
       const user = getUser();
@@ -28,7 +28,7 @@ export const ourFileRouter = {
       return { userId: user.id };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      // Whatever return from middleware '{userId}' will be accessable from the '.onUploadComplete()' as the metadata
+      // Whatever return from middleware '{userId}' will be accessible from the '.onUploadComplete()' as the metadata
 
       // Callback function via web hook above is trigger after the request
 
@@ -46,21 +46,35 @@ export const ourFileRouter = {
       // When uploading PDF right away, will index it so when asked a question, it's already indexed and can search just for the parts that are similar to the question
 
       try {
+        console.log("In this try block.")
         // Need PDF file here in memory to index it and how many pages it has. Can fetch the URL from a couple lines above, below
         const response = await fetch(
           `https://uploadthing-prod.s3.us-west-2.amazonaws.com/${file.key}`
         );
+        console.log("Response: ", response);
         // Need to be a "Blob" object to index it.
         const blob = await response.blob();
+        console.log("Blob: ", blob)
 
         // Load PDF file into memory
         const loader = new PDFLoader(blob);
+        console.log("Loader: ", loader);
 
         // Page Content will be in this document
         const pageLevelDocs = await loader.load();
+        console.log("pageLevelDocs: ", pageLevelDocs);
 
         // Amount of pages
         const pagesAmt = pageLevelDocs.length;
+
+        // New Solution - filtering with metadata instead of using namespace
+        pageLevelDocs.forEach((doc, i) => {
+          doc.metadata = {
+            ...doc.metadata,
+            fileId: createdFile.id,
+          };
+          console.log("pageLevelDocs For Each Doc Metadata: ", doc.metadata);
+        });
 
         // Vectorized and index entire document
         // const pinecone = await getPineconecClient()
@@ -76,8 +90,9 @@ export const ourFileRouter = {
           pineconeIndex,
           // Can save a vector to a certain namespace
           // When querying a fileId, can get all the vectors for that certain file.
-          namespace: createdFile.id,
+          // namespace: createdFile.id,
         });
+        // console.log("PineconeStore: ", doc.metadata);
 
         // Update file to successful upload state
         await db.file.update({

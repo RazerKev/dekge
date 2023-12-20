@@ -72,9 +72,13 @@ export const POST = async (req: NextRequest) => {
 
   // Search or vector store for the most relevant PDF page to this message that we just create a vector from.
   // "fromExistingIndex" is obtained from "pineconeIndex"
-  const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
+  const vectorStore = await PineconeStore.fromExistingIndex(embeddings,{
     pineconeIndex,
-    namespace: file.id,
+    // Cannot use namespace from pinecone since it's not the free tier anymore
+    // namespace: file.id,
+
+    // Use metadata filtering instead
+    filter: {"fileId": fileId}
   });
 
   // Get results from Pinecone. Passed in message & how many results or PDF Pages we want to get back (4 closest result to message to ensure good results)... Could add more messages, higher value when they upgrade to PRO

@@ -10,7 +10,7 @@ const MaxWdithWrapper  = ({
     children: ReactNode
 }) => { 
     return (
-        // Merging what we always want applied by defualt as first argument and merge it with incoming 'className" where component is being reused.
+        // Merging what we always want applied by default as first argument and merge it with incoming 'className" where component is being reused.
         <div className={cn('mx-auto w-full max-w-screen-xl px-2.5 md:px-20', className)}>
         {children}
     </div>

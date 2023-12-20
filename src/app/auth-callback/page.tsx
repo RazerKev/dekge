@@ -1,4 +1,4 @@
-"use client"; // Delcare this as client side for it to work. Are using the "useSearchParams()" which returns on client side.
+"use client"; // Declare this as client side for it to work. Are using the "useSearchParams()" which returns on client side.
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "../_trpc/client";
