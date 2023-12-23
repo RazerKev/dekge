@@ -13,7 +13,7 @@ export function absoluteUrl(path: string) {
   if (typeof window !== "undefined") return path; // Relative path
 
   // Else, if we're on the server-side and have deployed on Vercel,
-  // "https://${process.env.VERCEL_URL}" is the root URL by default like "https://yourwebsite.come" and the "${path}" is "/dashboard"
+  // "https://${process.env.VERCEL_URL}" is the root URL by default like "https://yourwebsite.come" and the "${path}" is "/dashboard" or any string that's passed in
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}${path}`;
 
   //------------- Local Development Below -------------

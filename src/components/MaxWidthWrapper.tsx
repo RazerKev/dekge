@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { ReactNode } from "react";
 
-// Spaceing for left and right side page will always be the same
+// Spacing for left and right side page will always be the same
 const MaxWdithWrapper  = ({
     className,
     children

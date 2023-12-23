@@ -84,7 +84,7 @@ export const appRouter = router({
       return { url: stripeSesssion.url };
     }
 
-    // If statement above fails, they are not let subscribe so let have them subscribe
+    // If statement above fails, they are not subscribe on pro plan so so let have them subscribed. "Create a Session" on Stripe Doc
     const stripeSesssion = await stripe.checkout.sessions.create({
       success_url: billingUrl,
       cancel_url: billingUrl,
