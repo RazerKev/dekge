@@ -1,4 +1,5 @@
 import { type ClassValue, clsx } from "clsx";
+import { Metadata } from "next";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -20,4 +21,52 @@ export function absoluteUrl(path: string) {
 
   // In all other cases, last case; absolute url. Used for local development environments and is running on own machine. Production env is used above with "https://" to encrypt data sent between client and server
   return `http://localhoast:${process.env.PORT ?? 3000}${path}`;
+}
+
+
+// Metadata part of website and this part also is shown on the browser tab when hovering mouse on it
+export function constructMetadata({
+  title = "Dekge - SaaS for Documents",
+  description = "Dekge is a software that makes chatting with your document files easy.",
+  image = "/thumbnail.png", // Image that pops up when sharing the website as an icon
+  icons = "/favicon.ico", // Icon on the browser tab
+  noIndex = false, // Setting it to false allow search engine to crawl and index website so it shows on Google
+}: {
+  title?: string
+  description?: string
+  image?: string
+  icons?: string
+  noIndex?: boolean
+} = {}): Metadata { // Saying this whole thing of function is type Metadata which is provided by Next.js
+  return {
+    // Can return these since we give default values above
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [
+        {
+          url: image, // the image passed above in the "image = "/thumbnail.png""
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [image], // Takes an array but only want a single image in there
+      creator: "", // Passed in my twitter name
+    },
+    icons,
+    metadataBase: new URL(""), // Put the production URL obtained from Vercel 
+    themeColor: "FFF",
+    // Prevent this page from being indexed to search engine
+    ...(noIndex && {
+      robots: {
+        index: false,
+        follow: false
+      }
+    })
+  };
 }

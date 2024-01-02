@@ -59,7 +59,7 @@ export const POST = async (req: NextRequest) => {
 
   //-------------------------------------------------------------
 
-  // See which page of the PDF is most relevant to the question the user is asking and retrieve that page for context and send it to the large language model together.
+  // See which page of the PDF is most relevant to the question the user is asking and retrieve that page for context and send it to the large language model (LLM) together.
 
   // Step 1: Vectorized message - Using the exact same embedded method from the "src\app\api\uploadthing\core.ts" to generate a vector. Uses the OpenAI API to generate embeddings for a given text. Copy and paste from "...\uploadthing\core.ts"
   const embeddings = new OpenAIEmbeddings({

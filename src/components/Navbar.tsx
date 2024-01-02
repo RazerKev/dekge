@@ -1,10 +1,20 @@
 import Link from "next/link";
 import MaxWdithWrapper from "./MaxWidthWrapper";
 import { buttonVariants } from "./ui/button";
-import { LoginLink, RegisterLink } from "@kinde-oss/kinde-auth-nextjs/server"
+import {
+  LoginLink,
+  RegisterLink,
+  getKindeServerSession,
+} from "@kinde-oss/kinde-auth-nextjs/server";
 import { ArrowRight } from "lucide-react";
+import UserAccountNav from "./UserAccountNav";
+import MobileNav from "./MobileNav";
 
 const Navbar = () => {
+  // Get user from Kinde
+  const { getUser } = getKindeServerSession();
+  const user = getUser();
+
   return (
     <nav className="sticky h-14 inset-x-0 top-0 z-30 w-full border-b border-gray-200 bg-white/75 backdrop-blur-lg transition-all">
       <MaxWdithWrapper>
@@ -13,33 +23,61 @@ const Navbar = () => {
             <span>ixi</span>
           </Link>
 
-          {/* Todo: add mobile navbar */}
+          {/* Mobile Nav. Passed in "isAuth" but with double "!!" since it is converting an object to a boolean (T or F)*/}
+          <MobileNav isAuth={!!user} />
+
           <div className="hidden items-center space-x-4 sm:flex">
-            {/* Using Fragment - Nest certain elements right below one another, don't want to extend DOM */}
-            <>
-              <Link
-                href="/pricing"
-                className={buttonVariants({
-                  variant: "ghost",
-                  size: "sm",
-                })}
-              >
-                Pricing
-              </Link>
-              <LoginLink
-                className={buttonVariants({
-                  variant: "ghost",
-                  size: "sm",
-                })}
-              >Sign in
-              </LoginLink>
-              <RegisterLink
-                className={buttonVariants({
-                  size: "sm",
-                })}
-              >Get Started <ArrowRight className="ml-1.5 h-5 w-5"/>
-              </RegisterLink>
-            </>
+            {/* Using Fragment "<> </>" - Nest certain elements right below one another, don't want to extend DOM and performance is faster; however, not on DOM and can't add classNames to it. */}
+            {!user ? (
+              <>
+                <Link
+                  href="/pricing"
+                  className={buttonVariants({
+                    variant: "ghost",
+                    size: "sm",
+                  })}
+                >
+                  Pricing
+                </Link>
+                <LoginLink
+                  className={buttonVariants({
+                    variant: "ghost",
+                    size: "sm",
+                  })}
+                >
+                  Sign in
+                </LoginLink>
+                <RegisterLink
+                  className={buttonVariants({
+                    size: "sm",
+                  })}
+                >
+                  Get Started <ArrowRight className="ml-1.5 h-5 w-5" />
+                </RegisterLink>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/dashboard"
+                  className={buttonVariants({
+                    variant: "ghost",
+                    size: "sm",
+                  })}
+                >
+                  Dashboard
+                </Link>
+                {/* Dropdown that can show the user options if they're logged in */}
+                <UserAccountNav
+                  email={user.email ?? ``}
+                  imageUrl={user.picture ?? ``}
+                  name={
+                    !user.given_name || !user.family_name
+                      ? "Your Account"
+                      : `${user.given_name} ${user.family_name}`
+                  }
+                />
+              </>
+            )}
           </div>
         </div>
       </MaxWdithWrapper>
