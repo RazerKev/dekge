@@ -59,7 +59,7 @@ export function constructMetadata({
       creator: "", // Passed in my twitter name
     },
     icons,
-    metadataBase: new URL(""), // Put the production URL obtained from Vercel 
+    // metadataBase: new URL(""), // Put the production URL obtained from Vercel 
     themeColor: "FFF",
     // Prevent this page from being indexed to search engine
     ...(noIndex && {
