@@ -1,4 +1,4 @@
-"use client"; // Client side - usong the "useQuery" utility
+"use client"; // Client side - using the "useQuery" utility
 
 import { trpc } from "@/app/_trpc/client";
 import UploadButton from "./UploadButton";
@@ -27,7 +27,7 @@ const Dashboard = () => {
   const { mutate: deleteFiles } = trpc.deleteFiles.useMutation({
     // Route has been successful & file has been deleted, callback is executed
     onSuccess: () => {
-      utils.getUserFiles.invalidate(); // Force 'getuserFiles()' to fetch data & refresh without manually refreshing or wating for query to become stale (out of date) before refetched again on success when deleting a file, invalidate and it will automatically realize file is not there.
+      utils.getUserFiles.invalidate(); // Force 'getUserFiles()' to fetch data & refresh without manually refreshing or waiting for query to become stale (out of date) before refetching again on success when deleting a file; invalidate and it will automatically realize file is not there.
     },
     onMutate({ id }) {
       // Triggers when the button is clicked
@@ -44,7 +44,7 @@ const Dashboard = () => {
       <div className="mt-8 flex flex-col items-start justify-between gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-center sm:gap-0">
         <h1 className="mb-3 font-bold text-5xl text-gray-500">My Files</h1>
 
-        <UploadButton />
+        <UploadButton isSubscribed={false} />
       </div>
 
       {/* Display all user files */}
@@ -82,7 +82,7 @@ const Dashboard = () => {
                 <div className="px-6 mt-4 grid grid-cols-3 place-items-center py-2 gap-6 text-xs text-zinc-500">
                   <div className="flex items-center gap-2">
                     <Plus className="h-4 w-4" />
-                    {/* 'fomrat(new Date())' if from date-fns module */}
+                    {/* 'format(new Date())' if from date-fns module */}
                     {format(new Date(file.createdAt), "MMM yyyy")}
                   </div>
                   <div className="flex items-center gap-2">

@@ -23,7 +23,7 @@ const Messages = ({ fileId }: MessageProps) => {
   const { data, isLoading, fetchNextPage } =
     trpc.getFileMessages.useInfiniteQuery(
       {
-        fileId, // Don't have "fileid" in this component so will need to receive the props above
+        fileId, // Don't have "fileId" in this component so will need to receive the props above
         limit: INFINITE_QUERY_LIMIT,
       },
       {

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
 import { Button } from "./ui/button";
 
-import Dropzone from "react-dropzone"; // Not destructure anyhything
+import Dropzone from "react-dropzone"; // Not destructure anything
 import { Cloud, File, Loader2 } from "lucide-react";
 import { Progress } from "./ui/progress";
 import { useUploadThing } from "@/lib/uploadthing";
@@ -12,7 +12,7 @@ import { useToast } from "./ui/use-toast";
 import { trpc } from "@/app/_trpc/client";
 import { useRouter } from "next/navigation";
 
-const UploadDropzone = () => {
+const UploadDropzone = ({ isSubscribed }: { isSubscribed: boolean }) => {
   const router = useRouter(); // Needed for pushing and navigating the URL after getFile
 
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -21,7 +21,9 @@ const UploadDropzone = () => {
   const { toast } = useToast();
 
   // Returns a Promise of object or undefined so can await this action (further down in the code)
-  const { startUpload } = useUploadThing("pdfUploader");
+  const { startUpload } = useUploadThing(
+    isSubscribed ? "proPlanUploader" : "freePlanUploader"
+  );
 
   // onSuccess callback to handle data sync with the Polling
   // Won't run with empty {}; Need to add '{mutate}' function to make this start polling. Named it 'startPolling' could be any name
@@ -31,7 +33,7 @@ const UploadDropzone = () => {
       // To redirect the user to the file, need access to router.
       router.push(`/dashboard/${file.id}`);
     },
-    // To do polling, add retry and it will continue indefinitently until it gets a successful response
+    // To do polling, add retry and it will continue indefinitely until it gets a successful response
     retry: true,
     retryDelay: 500, // half sec
   });
@@ -39,12 +41,12 @@ const UploadDropzone = () => {
   //   Determinate Progress bar - Don't have access to an actual progress. Can define how it skips (in increments) and once done uploading, can skip to 100. Skip in increment since unsure in whatever percentage of choice but if stuck or not complement by the increment, progress bar will stay at 95% until fully complete.
 
   const startSimulatedProgress = () => {
-    setUploadProgress(0); // Set to 0 for safety initalization
+    setUploadProgress(0); // Set to 0 for safety initialization
 
     const interval = setInterval(() => {
       // First arg have access to previous value when using state
       setUploadProgress((prevProgress) => {
-        // Don't progress anymore / invalidating whole thing to prevet pass 95%
+        // Don't progress anymore | invalidating whole thing to prevent surpassing 95%
         if (prevProgress >= 95) {
           clearInterval(interval);
           return prevProgress; // Would be 95%
@@ -104,7 +106,7 @@ const UploadDropzone = () => {
       }}
     >
       {/* Followed based on Doc */}
-      {/* 'getRootProps()' get props required for dran 'n' drop & use them on any element. 'getInputProps()' use the click and keydown behavior instead. 'acceptedFiles' is when user input the file  */}
+      {/* 'getRootProps()' get props required for drag 'n' drop & use them on any element. 'getInputProps()' use the click and keydown behavior instead. 'acceptedFiles' is when user input the file  */}
       {({ getRootProps, getInputProps, acceptedFiles }) => (
         <div
           {...getRootProps()}
@@ -113,7 +115,7 @@ const UploadDropzone = () => {
           <div className="flex items-center justify-center h-full w-full">
             {/* Dropzone should be wrapped in a "div" instead of "label" to prevent react-dropzone opening file manager 2-3 times */}
             <div
-              // htmlFor="dropzone-file" // This goes with the "label" tags above this comment that was removed in order to remove the file manager reopening 
+              // htmlFor="dropzone-file" // This goes with the "label" tags above this comment that was removed in order to remove the file manager reopening
               className="flex flex-col items-center justify-center w-full h-full rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
             >
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -169,15 +171,15 @@ const UploadDropzone = () => {
   );
 };
 
-const UploadButton = () => {
+const UploadButton = ({ isSubscribed }: { isSubscribed: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <Dialog
       open={isOpen}
-      onOpenChange={(vissible) => {
-        if (!vissible) {
-          setIsOpen(vissible);
+      onOpenChange={(visible) => {
+        if (!visible) {
+          setIsOpen(visible);
         }
       }}
     >
@@ -187,7 +189,7 @@ const UploadButton = () => {
       </DialogTrigger>
 
       <DialogContent>
-        <UploadDropzone />
+        <UploadDropzone isSubscribed={isSubscribed} />
       </DialogContent>
     </Dialog>
   );

@@ -18,7 +18,7 @@ type StreamResponse = {
 };
 
 // Always need to define the fallback values (will have four things to fallback to)
-// Also have to pass in the "StreamResponse" as a generic so TypeScripts knows what it is working with.
+// Also have to pass in the "StreamResponse" as a generic (can be named anything) so TypeScripts knows what it is working with.
 export const ChatContext = createContext<StreamResponse>({
   // Empty function that does nothing
   addMessage: () => {},
@@ -76,7 +76,7 @@ export const ChatContextProvider = ({ fileId, children }: Props) => {
       setMessage(""); // Message state is back to empty due to revert
 
       // Step 1
-      // Cancel any outgoing refetches or outbound calls so they don't overwrite or update
+      // Cancel any outgoing refetch or outbound calls so they don't overwrite or update
       await utils.getFileMessages.cancel();
 
       // Step 2
