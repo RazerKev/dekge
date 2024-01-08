@@ -7,9 +7,49 @@ import Skeleton from "react-loading-skeleton";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Button } from "./ui/button";
-import { useState } from "react";
+import { createContext, useState } from "react";
+import { getUserSubscriptionPlan } from "@/lib/stripe";
 
-const Dashboard = () => {
+type SubscriptionResponse = {
+  // subscriptionPlan: Awaited<ReturnType<typeof getUserSubscriptionPlan>>;
+  isSubscribed: boolean;
+  // isCanceled: boolean;
+  // stripeCurrentPeriodEnd: Date | null;
+  // name?: string;
+  // slug?: string;
+  // quota?: number;
+  // pagesPerPdf?: number;
+  // price?: {
+  //   amount: number;
+  //   priceIds: {
+  //     test: string;
+  //     production: string;
+  //   };
+  // };
+};
+
+export const SubscriptionContext = createContext<SubscriptionResponse>({
+  isSubscribed: false,
+  // isCanceled: false,
+  // stripeCurrentPeriodEnd: null,
+  // name: "Free",
+  // slug: "free",
+  // quota: 10,
+  // pagesPerPdf: 5,
+  // price: {
+  //   amount: 0,
+  //   priceIds: {
+  //     test: "",
+  //     production: "",
+  //   },
+  // },
+});
+
+const Dashboard = ({
+  subscriptionPlan,
+}: {
+  subscriptionPlan: SubscriptionResponse;
+}) => {
   // To know which file is being deleted specifically. Set as a string or null and currently is set as a null for default.
   const [currentlyDeletingFile, setCurrentlyDeletingFile] = useState<
     string | null
@@ -44,7 +84,9 @@ const Dashboard = () => {
       <div className="mt-8 flex flex-col items-start justify-between gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-center sm:gap-0">
         <h1 className="mb-3 font-bold text-5xl text-gray-500">My Files</h1>
 
-        <UploadButton isSubscribed={false} />
+        <SubscriptionContext.Provider value={subscriptionPlan}>
+          <UploadButton />
+        </SubscriptionContext.Provider>
       </div>
 
       {/* Display all user files */}

@@ -1,3 +1,5 @@
+// Use this for helpful setup: "https://dashboard.stripe.com/test/webhooks" and "https://medium.com/@levi.schouten.werk/building-a-payment-flow-in-next-js-13-using-stripe-mailsender-and-webhooks-291996bf1b24". Used Local listeners and it worked and used command ".\stripe trigger checkout.session.completed --add checkout_session:metadata.userId=123" to for manually triggering webhook with the "-add" parameter into the CLI terminal window.
+
 // By Next.JS enforcement, need a "route.ts" file (this file) inside this directory "src\app\api\webhooks\stripe\route.ts" which can determines the logic when someone pays for a subscription. Using boilerplate provided below
 
 // Webhook is a method of automating & integrating data or events btw different applications or systems over internet.  Application on one end can send real-time information to another application or service when event or trigger occurs (in this case, when user buys something).
@@ -35,6 +37,7 @@ export async function POST(request: Request) {
     );
   }
 
+
   // Event data is expected to be an object containing info about checkout session, including metadata such as user ID.
   // The "as Stripe.Checkout.Session" part is a type cast in TypeScript. It’s telling TypeScript to treat "event.data.object" as a "Stripe.Checkout.Session" object. This allows you to access properties of "Stripe.Checkout.Session" on "event.data.object" without TypeScript throwing errors. "data" and "object" are both defined in Stripe APIs and "event.data.object" could be several different types of objects depending on the type of the event (it could be a Checkout.Session object, an Invoice object, a PaymentIntent object, etc.). But by casting it to "Stripe.Checkout.Session", you’re specifying that in this context, you expect it to be a "Checkout.Session object".
   const session = event.data.object as Stripe.Checkout.Session;
@@ -48,6 +51,7 @@ export async function POST(request: Request) {
 
   // User buys for the first time, can add into database. This means user completed a checkout session (made the payment) and this code retrieves the subscription details from Stripe and then updates the user's record in the database with the subscription details.
   if (event.type === "checkout.session.completed") {
+
     const subscription = await stripe.subscriptions.retrieve(
       session.subscription as string
     );

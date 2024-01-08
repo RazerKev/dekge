@@ -20,7 +20,7 @@ export function absoluteUrl(path: string) {
   //------------- Local Development Below -------------
 
   // In all other cases, last case; absolute url. Used for local development environments and is running on own machine. Production env is used above with "https://" to encrypt data sent between client and server
-  return `http://localhoast:${process.env.PORT ?? 3000}${path}`;
+  return `http://localhost:${process.env.PORT ?? 3000}${path}`;
 }
 
 

@@ -47,8 +47,7 @@ const BillingForm = ({ subscriptionPlan }: BillingFormProps) => {
           <CardHeader>
             <CardTitle>Subscription Plan</CardTitle>
             <CardDescription>
-              You are currently on the <strong>{subscriptionPlan.name}</strong>{" "}
-              plan.
+              You are currently on the <strong>{subscriptionPlan.name}</strong> plan.
             </CardDescription>
           </CardHeader>
 
@@ -64,7 +63,7 @@ const BillingForm = ({ subscriptionPlan }: BillingFormProps) => {
             {/* Display when this plan will be canceled or renewed */}
             {subscriptionPlan.isSubscribed ? (
                 <p className="rounded-full text-xs font-medium">
-                    {subscriptionPlan.isCanceled ? "Your plan will be canceled on " : "Your plan renews on"}
+                    {subscriptionPlan.isCanceled ? "Your plan will be canceled on " : "Your plan renews on "}
                     {/* Need the "!" at the end to tell TypeScript we're sure that this exists */}
                     {format(subscriptionPlan.stripeCurrentPeriodEnd!, "dd.MM.yyyy")}.
                 </p>

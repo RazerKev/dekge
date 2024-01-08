@@ -50,7 +50,7 @@ const Page = async ({ params }: PageProps) => {
         </div>
         {/* Right Side - Chat PDF */}
         <div className="shrink-0 flex-[0.75] border-t border-gray-200 lg:w-96 lg:border-l lg:border-t-0">
-          {/* Wrapper Component - Wraps both input and message (seperate components but combined into one here) */}
+          {/* Wrapper Component - Wraps both input and message (separate components but combined into one here) */}
           <ChatWrapper fileId={file.id}/>
         </div>
       </div>

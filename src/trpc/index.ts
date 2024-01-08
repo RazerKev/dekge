@@ -76,16 +76,16 @@ export const appRouter = router({
     // If on pro plan
     if (subscriptionPlan.isSubscribed && dbUser.stripeCustomerId) {
       // Send user to a management page where they can cancel or manage subscription
-      const stripeSesssion = await stripe.billingPortal.sessions.create({
+      const stripeSession = await stripe.billingPortal.sessions.create({
         customer: dbUser.stripeCustomerId,
         return_url: billingUrl,
       });
       // Send back to the front-end to redirect user to. Hosted page Stripe provides under this URL
-      return { url: stripeSesssion.url };
+      return { url: stripeSession.url };
     }
 
     // If statement above fails, they are not subscribe on pro plan so so let have them subscribed. "Create a Session" on Stripe Doc
-    const stripeSesssion = await stripe.checkout.sessions.create({
+    const stripeSession = await stripe.checkout.sessions.create({
       success_url: billingUrl,
       cancel_url: billingUrl,
       payment_method_types: ["card", "paypal"],
@@ -104,7 +104,7 @@ export const appRouter = router({
         userId: userId,
       },
     });
-    return { url: stripeSesssion.url };
+    return { url: stripeSession.url };
   }),
 
   // API Endpoint - getFileMessages - fetching all the messages that was sent for a specific file for "src\components\chat\Messages.tsx". Private Procedure so have to be logged in

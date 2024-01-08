@@ -20,7 +20,7 @@ const Navbar = () => {
       <MaxWdithWrapper>
         <div className="flex h-14 items-center justify-between border-b border-zinc-200">
           <Link href="/" className="flex z-40 font-semibold">
-            <span>ixi</span>
+            <span>Dekge</span>
           </Link>
 
           {/* Mobile Nav. Passed in "isAuth" but with double "!!" since it is converting an object to a boolean (T or F)*/}

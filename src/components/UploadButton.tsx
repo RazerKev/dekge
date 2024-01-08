@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
 import { Button } from "./ui/button";
 
@@ -11,14 +11,17 @@ import { useUploadThing } from "@/lib/uploadthing";
 import { useToast } from "./ui/use-toast";
 import { trpc } from "@/app/_trpc/client";
 import { useRouter } from "next/navigation";
+import { SubscriptionContext } from "./Dashboard";
 
-const UploadDropzone = ({ isSubscribed }: { isSubscribed: boolean }) => {
+const UploadDropzone = () => {
   const router = useRouter(); // Needed for pushing and navigating the URL after getFile
 
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
 
   const { toast } = useToast();
+
+  const { isSubscribed } = useContext(SubscriptionContext);
 
   // Returns a Promise of object or undefined so can await this action (further down in the code)
   const { startUpload } = useUploadThing(
@@ -124,7 +127,7 @@ const UploadDropzone = ({ isSubscribed }: { isSubscribed: boolean }) => {
                   <span className="font-semibold">Click to upload</span> or drag
                   and drop.
                 </p>
-                <p className="text-xs text-zinc-500">PDF (up to 4MB)</p>
+                <p className="text-xs text-zinc-500">PDF (up to {isSubscribed ? "16" : "4"}MB)</p>
               </div>
               {/* If the file is upload (would be stored in 'acceptedFiles') and at the first index since only checking for one file */}
               {acceptedFiles && acceptedFiles[0] ? (
@@ -171,7 +174,7 @@ const UploadDropzone = ({ isSubscribed }: { isSubscribed: boolean }) => {
   );
 };
 
-const UploadButton = ({ isSubscribed }: { isSubscribed: boolean }) => {
+const UploadButton = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -189,7 +192,7 @@ const UploadButton = ({ isSubscribed }: { isSubscribed: boolean }) => {
       </DialogTrigger>
 
       <DialogContent>
-        <UploadDropzone isSubscribed={isSubscribed} />
+        <UploadDropzone />
       </DialogContent>
     </Dialog>
   );

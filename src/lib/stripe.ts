@@ -15,6 +15,7 @@ export async function getUserSubscriptionPlan() {
 
   // If they're not logged in, return null/false for all values to indicate not subscribed
   if (!user.id) {
+    console.log("User not logged in. Returning null/false")
     return {
       ...PLANS[0],
       isSubscribed: false,
@@ -40,7 +41,11 @@ export async function getUserSubscriptionPlan() {
     };
   }
 
+  console.log("Successfully went into Database and found dbUser: ", dbUser);
+
   const oneDay = 24 * 60 * 60 * 1000; // 86400000 ms = 1 day
+
+  console.log("One Day is:", oneDay, "ms");
 
   // Check if db user is subscribed with the three statements below
   const isSubscribed = Boolean(
@@ -50,9 +55,13 @@ export async function getUserSubscriptionPlan() {
       dbUser.stripeCurrentPeriodEnd.getTime() + oneDay > Date.now()
   );
 
+  console.log("Is the user subscribed: ", isSubscribed);
+
   const plan = isSubscribed
     ? PLANS.find((plan) => plan.price.priceIds.test === dbUser.stripePriceId)
     : null;
+
+  console.log("The plan: ", plan);
 
   // Get if they cancel their plan or not
   let isCanceled = false;
@@ -62,6 +71,8 @@ export async function getUserSubscriptionPlan() {
     );
     isCanceled = stripePlan.cancel_at_period_end;
   }
+
+  console.log("Check if canceled: ", isCanceled);
 
   return {
     ...plan,
