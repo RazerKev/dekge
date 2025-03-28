@@ -7,13 +7,16 @@ import { ChevronLeft, Loader2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "../ui/button";
 import { ChatContextProvider } from "./ChatContext";
+import { getUserSubscriptionPlan } from "@/lib/stripe";
 
 interface ChatWrapperProps {
   fileId: string;
+  subscriptionPlan: Awaited<ReturnType<typeof getUserSubscriptionPlan>>;
 }
 
-const ChatWrapper = ({ fileId }: ChatWrapperProps) => {
+const ChatWrapper = ({ fileId, subscriptionPlan }: ChatWrapperProps) => {
   // Handle Loading States using Polling Approach; triggers when page loads
+  // The "trpc.getFileStatusUpdateProFilesStatus.useQuery()" is a hook so CANNOT wrap it in a conditional statement (while, if, for, etc) and must be run without that.
   const { data, isLoading } = trpc.getFileUploadStatus.useQuery(
     {
       fileId,
@@ -29,6 +32,23 @@ const ChatWrapper = ({ fileId }: ChatWrapperProps) => {
     }
   );
 
+  const { isSubscribed } = subscriptionPlan;
+  // Problem - User files for "core.ts" from uploadthing folder may be at data.status = FAILED since the user was on failed status when uploaded but upgrade to pro plan so should update the status of the files. (Maybe called another endpoint that goes through the first "pagesPerPdf" files updating the status of all of them to SUCCESS, leaving rest set to Failed)
+
+  // Error - can't have a hook invoked inside the body of an if, else, for or while statement? Need to move that hook into a component and render the component itself conditionally.
+  // if (data?.status === "FAILED" && isSubscribed) {
+  // const { data, isLoading } = trpc.checkProFileUploadStatus.useQuery(
+  //   // { enabled: !!isSubscribed },
+  //   { fileId },
+  //   {
+  //     refetchInterval: (data: { status: string }) =>
+  //       data?.status === "SUCCESS" || data?.status === "FAILED" ? false : 500,
+  //   }
+  // );
+  // return { data, isLoading };
+  // }
+
+  console.log("Fetching data.status: ", data?.status);
   // Don't have the result of API call yet (no status yet is Loading)
   if (isLoading)
     return (
@@ -98,9 +118,9 @@ const ChatWrapper = ({ fileId }: ChatWrapperProps) => {
     // Both Components "<Messages />" and "<ChatInput />" that uses the context are already in this file so no extra work needed.
     <ChatContextProvider fileId={fileId}>
       <div className="relative min-h-full bg-zinc-50 flex divide-y divide-zinc-200 flex-col justify-between gap-2">
-        <div className="flex-1 justify-between flex flex-col mb-28">
+        <div className="flex-1 justify-between flex flex-col mb-20">
           {/* Display the Messages Component */}
-          <Messages fileId={fileId}/>
+          <Messages fileId={fileId} />
         </div>
         {/* Render Chat Input */}
         <ChatInput />

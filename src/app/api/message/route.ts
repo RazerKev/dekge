@@ -98,7 +98,7 @@ export const POST = async (req: NextRequest) => {
   // Send them to OpenAI to answer the messages but OpenAI expects a really certain format
   // Each object being mapped over returns a object implicitly(wrap the object in "()" for that)
   // Format messages to be sent to OpenAI
-  const formattedPrevMessages = prevMessages.map((msg) => ({
+  const formattedPrevMessages = prevMessages.map((msg: { isUserMessage: any; text: any; }) => ({
     // If the role is user Message, then the role should be "user"
     // Need "as const" to prevent TypeScript error.
     role: msg.isUserMessage ? ("user" as const) : ("assistant" as const),
@@ -126,7 +126,7 @@ export const POST = async (req: NextRequest) => {
   \n----------------\n
   
   PREVIOUS CONVERSATION:
-  ${formattedPrevMessages.map((message) => {
+  ${formattedPrevMessages.map((message: { role: string; content: any; }) => {
     if (message.role === "user") return `User: ${message.content}\n`;
     return `Assistant: ${message.content}\n`;
   })}

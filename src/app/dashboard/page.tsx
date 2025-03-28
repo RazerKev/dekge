@@ -21,9 +21,11 @@ const Page = async () => {
   });
 
   // If user in database doesn't exists
+  // (Update - STUCK in this part where no user exists and throws me back to dashboard which dashboard when push to origin throws me here leading to an infinite loop)
   if (!dBUser) redirect("/auth-callback?origin=dashboard");
+  
 
-  const subscriptionPlan = await getUserSubscriptionPlan()
+  const subscriptionPlan = await getUserSubscriptionPlan();
 
   // Display logged in authenticated user for dashboard - Server Component
   return <Dashboard subscriptionPlan={subscriptionPlan} />;

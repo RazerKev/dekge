@@ -4,7 +4,9 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import Stripe from "stripe";
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
-  apiVersion: "2023-10-16",
+  // Outdated Stripe API version
+  // apiVersion: "2023-10-16",
+  apiVersion: "2024-12-18.acacia",
   typescript: true,
 });
 
@@ -15,7 +17,7 @@ export async function getUserSubscriptionPlan() {
 
   // If they're not logged in, return null/false for all values to indicate not subscribed
   if (!user.id) {
-    console.log("User not logged in. Returning null/false")
+    console.log("User not logged in. Returning null/false");
     return {
       ...PLANS[0],
       isSubscribed: false,
@@ -59,7 +61,7 @@ export async function getUserSubscriptionPlan() {
 
   const plan = isSubscribed
     ? PLANS.find((plan) => plan.price.priceIds.test === dbUser.stripePriceId)
-    : null;
+    : PLANS[0]; // Return free plan if not subscribed
 
   console.log("The plan: ", plan);
 
@@ -72,7 +74,52 @@ export async function getUserSubscriptionPlan() {
     isCanceled = stripePlan.cancel_at_period_end;
   }
 
-  console.log("Check if canceled: ", isCanceled);
+  // Handle subscription expiration or cancellation
+  if (!isSubscribed || isCanceled) {
+    // If subscription expired or cancelled, update files that exceed free plan limits
+    const freePlan = PLANS[0];
+    try {
+      // Update files that exceed free plan limits to FAILED status
+      await db.file.updateMany({
+        where: {
+          userId: user.id,
+          pageAmt: {
+            gt: freePlan.pagesPerPdf,
+          },
+        },
+        data: {
+          uploadStatus: "FAILED",
+        },
+      });
+
+      // If they had more files than free plan quota, mark excess as FAILED
+      const files = await db.file.findMany({
+        where: {
+          userId: user.id,
+          uploadStatus: "SUCCESS",
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      if (files.length > freePlan.quota) {
+        const excessFiles = files.slice(freePlan.quota);
+        await db.file.updateMany({
+          where: {
+            id: {
+              in: excessFiles.map((file) => file.id),
+            },
+          },
+          data: {
+            uploadStatus: "FAILED",
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Error updating file statuses:", error);
+    }
+  }
 
   return {
     ...plan,

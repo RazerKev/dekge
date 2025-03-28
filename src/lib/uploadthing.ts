@@ -1,6 +1,6 @@
 // Created in 'lib' to prepare a library to be used inside the project 
 
-import { generateReactHelpers } from "@uploadthing/react/hooks";
+import { generateReactHelpers } from "@uploadthing/react";
 
 // import type { OurFileRouter } from "~/app/api/uploadthing/core";
 

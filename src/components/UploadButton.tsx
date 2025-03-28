@@ -2,8 +2,7 @@
 
 import { useContext, useState } from "react";
 import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
-import { Button } from "./ui/button";
-
+import { Button, buttonVariants } from "./ui/button";
 import Dropzone from "react-dropzone"; // Not destructure anything
 import { Cloud, File, Loader2 } from "lucide-react";
 import { Progress } from "./ui/progress";
@@ -13,6 +12,7 @@ import { trpc } from "@/app/_trpc/client";
 import { useRouter } from "next/navigation";
 import { SubscriptionContext } from "./Dashboard";
 
+// Rest of the file content remains exactly the same
 const UploadDropzone = () => {
   const router = useRouter(); // Needed for pushing and navigating the URL after getFile
 
@@ -23,9 +23,45 @@ const UploadDropzone = () => {
 
   const { isSubscribed } = useContext(SubscriptionContext);
 
+  const [uploadError, setUploadError] = useState(false);
+  let progressInterval: string | number | NodeJS.Timeout | undefined;
+
+  //   Determinate Progress bar - Don't have access to an actual progress. Can define how it skips (in increments) and once done uploading, can skip to 100. Skip in increment since unsure in whatever percentage of choice but if stuck or not complement by the increment, progress bar will stay at 95% until fully complete.
+  const startSimulatedProgress = () => {
+    setUploadProgress(0); // Set to 0 for safety initialization
+    progressInterval = setInterval(() => {
+      // First arg have access to previous value when using state
+      setUploadProgress((prevProgress) => {
+        // Don't progress anymore | invalidating whole thing to prevent surpassing 95%
+        if (prevProgress >= 95 || uploadError) {
+          // Stop progress if an error occurred
+          clearInterval(progressInterval);
+          return prevProgress; // Would be 95%
+        }
+        return prevProgress + 5; // '5' can be any value of increment
+      });
+    }, 500); // 500ms is set for interval
+  };
+
   // Returns a Promise of object or undefined so can await this action (further down in the code)
   const { startUpload } = useUploadThing(
-    isSubscribed ? "proPlanUploader" : "freePlanUploader"
+    isSubscribed ? "proPlanUploader" : "freePlanUploader",
+    {
+      onUploadError: (error) => {
+        console.log("This is the error on upload error: ", error);
+        // clearInterval(progressInterval); // Clear the interval when an error occurs
+        setUploadProgress(0); // Reset the progress
+        setUploadError(true); // Set uploadError to true
+        setIsUploading(false); // Stop the upload progress
+
+        // This toast message does not get fired but leave it just in case as backup
+        toast({
+          title: "Upload failed",
+          description: "You have reached the maximum file size or page limit.",
+          variant: "destructive",
+        });
+      },
+    }
   );
 
   // onSuccess callback to handle data sync with the Polling
@@ -43,39 +79,46 @@ const UploadDropzone = () => {
 
   //   Determinate Progress bar - Don't have access to an actual progress. Can define how it skips (in increments) and once done uploading, can skip to 100. Skip in increment since unsure in whatever percentage of choice but if stuck or not complement by the increment, progress bar will stay at 95% until fully complete.
 
-  const startSimulatedProgress = () => {
-    setUploadProgress(0); // Set to 0 for safety initialization
+  // const startSimulatedProgress = () => {
+  //   setUploadProgress(0); // Set to 0 for safety initialization
 
-    const interval = setInterval(() => {
-      // First arg have access to previous value when using state
-      setUploadProgress((prevProgress) => {
-        // Don't progress anymore | invalidating whole thing to prevent surpassing 95%
-        if (prevProgress >= 95) {
-          clearInterval(interval);
-          return prevProgress; // Would be 95%
-        }
-        return prevProgress + 5; // '5' can be any value of increment
-      });
-    }, 500); // 500ms is set for interval
-    return interval;
-  };
+  //   const interval = setInterval(() => {
+  //     // First arg have access to previous value when using state
+  //     setUploadProgress((prevProgress) => {
+  //       // Don't progress anymore | invalidating whole thing to prevent surpassing 95%
+  //       if (prevProgress >= 95) {
+  //         clearInterval(interval);
+  //         return prevProgress; // Would be 95%
+  //       }
+  //       return prevProgress + 5; // '5' can be any value of increment
+  //     });
+  //   }, 500); // 500ms is set for interval
+  //   return interval;
+  // };
 
   return (
     <Dropzone
       multiple={false}
       onDrop={async (acceptedFiles) => {
         setIsUploading(true);
+        setUploadError(false); // Reset uploadError before each upload attempt
 
         const progressInterval = startSimulatedProgress();
 
         // Handle File uploading from uploadThing. HOWEVER, does not mean file is in the database so have to do POLLING APPROACH (every couple of ms, the service/app (dekge) communicate and asks the api (created in index, 'getFile') if the file is there in DB, and API respond back with success response but IF NOT, then the service & api will keep 'polling' until it's there on success (all of this is asynchronous)) and check if exists in database using keys
         const res = await startUpload(acceptedFiles);
 
+        if (uploadError) {
+          // Check if an error occurred during the upload
+          return;
+        }
+
         // If no response, send a toast pop up error from ui.shadcn.com
         if (!res) {
           return toast({
             title: "Something went wrong",
-            description: "Please try again later",
+            description:
+              "Please try again later. Invalid file size or page amount not supporting the free plan.",
             variant: "destructive",
           });
         }
@@ -92,14 +135,12 @@ const UploadDropzone = () => {
         if (!key) {
           return toast({
             title: "Something went wrong",
-            description: "Please try again later",
+            description: "Please try again later. No key for file.",
             variant: "destructive",
           });
         }
 
-        //
-
-        clearInterval(progressInterval); // Resetting after done, clear the interval
+        // clearInterval(progressInterval); // Resetting after done, clear the interval
         setUploadProgress(100); // Done uploading
 
         // Add this last to start polling if there's a key
@@ -127,7 +168,9 @@ const UploadDropzone = () => {
                   <span className="font-semibold">Click to upload</span> or drag
                   and drop.
                 </p>
-                <p className="text-xs text-zinc-500">PDF (up to {isSubscribed ? "16" : "4"}MB)</p>
+                <p className="text-xs text-zinc-500">
+                  PDF (up to {isSubscribed ? "16" : "4"}MB)
+                </p>
               </div>
               {/* If the file is upload (would be stored in 'acceptedFiles') and at the first index since only checking for one file */}
               {acceptedFiles && acceptedFiles[0] ? (
@@ -140,6 +183,7 @@ const UploadDropzone = () => {
                   </div>
                 </div>
               ) : null}
+              {/* NEW/NEED to ADD: Conditional statement where if "isUploading" have files that are too big or too many pages, then a red upload bar. */}
               {isUploading ? (
                 <div className="w-full mt-4 max-w-xs mx-auto">
                   <Progress
@@ -161,7 +205,7 @@ const UploadDropzone = () => {
               ) : null}
 
               <input
-                {...getInputProps} // Followed from Doc
+                {...getInputProps()} // Execute the function to get the props
                 type="file"
                 id="dropzone-file"
                 className="hidden"
@@ -175,20 +219,27 @@ const UploadDropzone = () => {
 };
 
 const UploadButton = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  // State to control the Dialog's open/closed state. This is needed for proper synchronization between the Dialog's internal state and our application state
+  const [isOpen, setIsOpen] = useState<boolean>(false);
 
   return (
     <Dialog
+      // The 'open' prop makes this a controlled component, allowing us to explicitly manage its state rather than letting it handle state internally
       open={isOpen}
-      onOpenChange={(visible) => {
-        if (!visible) {
-          setIsOpen(visible);
-        }
-      }}
+      // onOpenChange handles all state changes (clicking trigger, clicking outside, pressing escape)
+      // The 'visible' parameter is the new state the Dialog wants to enter
+      onOpenChange={(visible) => setIsOpen(visible)}
     >
-      <DialogTrigger onClick={() => setIsOpen(true)} asChild>
+      <DialogTrigger asChild>
         {/* 'asChild' makes a custom button as not DialogTrigger inherited. The Button below is main/active */}
-        <Button>Upload PDF</Button>
+        {/* Using asChild allows us to maintain our custom Button styling while getting Dialog trigger functionality */}
+        <Button
+          className={`${buttonVariants({
+            variant: "lightpink",
+          })}`}
+        >
+          Upload PDF
+        </Button>
       </DialogTrigger>
 
       <DialogContent>

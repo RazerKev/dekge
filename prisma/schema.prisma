@@ -1,4 +1,4 @@
-// NOTE - when doing local changes in this file, always push them in database first and then generate local types using "npx primsa db push" to push changes in DB and "npx prisma generate" to generate local typescript
+// NOTE - when doing local changes in this file, always push them in database first and then generate local types using "npx prisma db push" to push changes in DB and "npx prisma generate" to generate local typescript
 
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
@@ -7,8 +7,11 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Note - Since PlanetScale is removing their free data DB schema, have to migrate elsewhere so choose Neon DB but will have to migrate from MySQL to PosgresQL
 datasource db {
-  provider     = "mysql" // Changed to mysql
+  // Changed from "mysql" to "postgresql"
+  // provider     = "mysql" // Changed to mysql
+  provider = "postgresql"
   url          = env("DATABASE_URL")
   relationMode = "prisma"
 }
@@ -48,6 +51,9 @@ model File {
   url      String
   key      String
   messages Message[]
+
+  //// New field for getting the number of pages to even determine if the document uploaded should be processed
+  pageAmt  Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

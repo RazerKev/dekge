@@ -75,8 +75,8 @@ const Page = () => {
     <>
       <MaxWdithWrapper className="mb-8 mt-24 text-center max-w-5xl">
         <div className="mx-auto mb-10 sm:max-w-lg">
-          <h1 className="text-6xl font-bold sm:text-7xl">Pricing</h1>
-          <p className="mt-5 text-gray-600 sm:text-lg">
+          <h1 className="text-6xl font-bold sm:text-7xl text-light-pink">Pricing</h1>
+          <p className="mt-5 text-gray-600 sm:text-lg text-slate-200">
             Whether you&apos;re just trying out our service or need more,
             we&apos;ve got you covered.
           </p>
@@ -93,13 +93,13 @@ const Page = () => {
                 <div
                   key={plan}
                   className={cn("relative rounded-2xl bg-white shadow-lg", {
-                    "border-2 border-blue-600 shadow-blue-200": plan === "Pro",
+                    "border-2 border-purpink shadow-pink-200": plan === "Pro",
                     "border border-gray-200": plan !== "Pro",
                   })}
                 >
                   {/* If element we're mapping over is "pro" plan, render out JSX "Upgrade Now" design pill around card. */}
                   {plan === "Pro" && (
-                    <div className="absolute -top-5 left-0 right-0 mx-auto w-32 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-2 text-sm font-medium text-white">
+                    <div className="absolute -top-5 left-0 right-0 mx-auto w-32 rounded-full bg-gradient-to-r from-light-pink to-light-purple px-3 py-2 text-sm font-medium text-white">
                       Upgrade now
                     </div>
                   )}
@@ -116,7 +116,7 @@ const Page = () => {
                     <p className="text-gray-500">per month</p>
                   </div>
 
-                  <div className="flex h-20 items-center justify-center border-b border-t border-gray-200 bg-gray-50">
+                  <div className="flex h-20 items-center justify-center border-b border-t border-gray-200 bg-slate-100">
                     <div className="flex items-center space-x-1">
                       {/* Need "toLocaleString()" for converting the quota/price to local formatting with commas & dots. */}
                       <p>{quota.toLocaleString()} PDFs/mo included</p>
@@ -138,7 +138,7 @@ const Page = () => {
                           {negative ? (
                             <Minus className="h-6 w-6 text-gray-300" />
                           ) : (
-                            <Check className="h-6 w-6 text-blue-500" />
+                            <Check className="h-6 w-6 text-dark-purple" />
                           )}
                         </div>
                         {footnote ? (
@@ -184,11 +184,17 @@ const Page = () => {
                         href={user ? "/dashboard" : "/sign-in"}
                         className={buttonVariants({
                           className: "w-full",
-                          variant: "secondary"
+                          variant: "secondary",
                         })}
                       >
-                        {user ? "Upgrade now" : "Sign up"}
-                        <ArrowRight className="h-5 w-5 ml-1.5" />
+                        {user
+                          ? "Upgraded"
+                          : (
+                            <>
+                              Sign up <ArrowRight className="h-5 w-5 ml-1.5" />
+                            </>
+                          )
+                        }
                       </Link>
                     ) : user ? (
                       <UpgradeButton />

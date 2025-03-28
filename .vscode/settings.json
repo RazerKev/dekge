@@ -8,9 +8,12 @@
         "lucide",
         "mantine",
         "nextjs",
+        "Roboto",
         "shadcn",
+        "tailwindcss",
         "tanstack",
         "trpc",
-        "uploadthing"
+        "uploadthing",
+        "utapi"
     ]
 }

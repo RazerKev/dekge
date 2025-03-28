@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    // Enable Fast Refresh explicitly
+    reactStrictMode: true,
+    swcMinify: true,
+    experimental: {
+        // Ensure Fast Refresh is enabled
+        fastRefresh: true,
+    },
 
     // For the "/sign-in" and "/sign-up" to work with the KindeAuth (since there's no page files for these two paths, need to add a destination when the source lands on these url paths). These two paths exits here but need to add redirect to put the user to correct and clean url of the destination.
     async redirects() {
@@ -24,6 +31,17 @@ const nextConfig = {
         // Disabled for server-side rendering only
         config.resolve.alias.canvas = false // From npm document
         config.resolve.alias.encoding = false // From GitHub
+        
+        // Ensure hot reloading works properly
+        if (dev) {
+            config.watchOptions = {
+                ...config.watchOptions,
+                ignored: /node_modules/,
+                poll: 1000, // Check for changes every second
+                aggregateTimeout: 300, // Delay before rebuilding
+            };
+        }
+        
         return config
     },
 
@@ -33,6 +51,19 @@ const nextConfig = {
 
     //     return config;
     // },
+
+    // Runtime Error: Invalid src prop on `next/image`, hostname "gravatar.com" is not configured under images in your `next.config.js`. From Next.js website, one of the pages leverages the next/image component, passed a "src" value that uses a hostname in the URL that's not defined in the "images.remotePatterns" in "next.config.js"
+    // Solution:  Add the protocol, hostname, port, and pathname to the images.remotePatterns config in next.config.js which is below:
+    images: {
+        remotePatterns: [
+            {
+                protocol: 'https',
+                hostname: 'gravatar.com',
+                port: '',
+                pathname: '/avatar/**', // The "**" selects all pathnames in this directory 
+            },
+        ],
+    },
 }
 
 module.exports = nextConfig

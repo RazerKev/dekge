@@ -7,7 +7,7 @@ import Skeleton from "react-loading-skeleton";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Button } from "./ui/button";
-import { createContext, useState } from "react";
+import { useEffect, createContext, useState, useRef } from "react";
 import { getUserSubscriptionPlan } from "@/lib/stripe";
 
 type SubscriptionResponse = {
@@ -79,10 +79,33 @@ const Dashboard = ({
     },
   });
 
+  // 9/16/2024 - New Added in (Testing)
+  const { mutate: updateFileStatus } = trpc.updateFileStatus.useMutation({
+    onSuccess: () => {
+      console.log(
+        "Compatible files have been updated to success. Location: Dashboard.tsx"
+      );
+    },
+  });
+
+  // Goal: Want this mutation code above and code below to run when page loads and update any file status if user had "Success" on pro plan uploads to "Fail" if their subscription ends
+  // Problem: With no "useRef()" code, this will rerender twice so will require "useRef()" .
+  // Solution: "useRef()" hook ensures that the "updateFileStatus" mutation is only called once when the component mounts, and it prevents any subsequent calls during re-renders.
+  const hasCalledUpdateFileStatus = useRef(false);
+  // When component mounts, useEffect hook is run and "hasCalledUpdateFileStatus.current" value is checked. Initially set to false, it is called and then set to "true". On subsequent renders, the useEffect hook will run again, but this time, the check "if (!hasCalledUpdateFileStatus.current)" will fail because "hasCalledUpdateFileStatus.current" is now "true". This prevents the "updateFileStatus" mutation from being called again.
+  // On subsequent render, "useEffect" runs because it’s the first time the component is rendered. The "updateFileStatus" function is called, and the effect runs. Subsequent renders are re-renders that happen after the initial render of the component. These can occur due to state changes, prop changes, or other factors that cause React to re-render the component and are not PAGE RElOADING. For page reloading, entire React component tree is unmounted and remounted so all states including "useRef" values are reset.
+  // The "useRef" hook works within the lifecycle of a single component instance. It helps prevent multiple calls to "updateFileStatus" during the lifecycle of that instance. However, when you reload the page, a new instance of the component is created, and the "useRef" value is reset.
+  useEffect(() => {
+    if (!hasCalledUpdateFileStatus.current) {
+      updateFileStatus();
+      hasCalledUpdateFileStatus.current = true;
+    }
+  }, [updateFileStatus]);
+
   return (
     <main className="mx-auto max-w-7xl md:p-10">
       <div className="mt-8 flex flex-col items-start justify-between gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-center sm:gap-0">
-        <h1 className="mb-3 font-bold text-5xl text-gray-500">My Files</h1>
+        <h1 className="mb-3 font-bold text-5xl text-light-pink">My Files</h1>
 
         <SubscriptionContext.Provider value={subscriptionPlan}>
           <UploadButton />
@@ -111,7 +134,7 @@ const Dashboard = ({
                   className="flex flex-col gap-2"
                 >
                   <div className="pt-6 px-6 flex w-full items-center justify-between space-x-6">
-                    <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" />
+                    <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-r from-light-pink to-light-purple" />
                     <div className="flex-1 truncate">
                       <div className="flex items-center space-x-3">
                         <h3 className="truncate text-lg font-medium text-zinc-900">
@@ -128,8 +151,10 @@ const Dashboard = ({
                     {format(new Date(file.createdAt), "MMM yyyy")}
                   </div>
                   <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    mocked
+                    {/* <MessageSquare className="h-4 w-4" />
+                    mocked */}
+                    {file.uploadStatus}
+                    <div>Testing</div>
                   </div>
                   <Button
                     onClick={() => deleteFiles({ id: file.id })}

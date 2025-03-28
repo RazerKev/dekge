@@ -34,13 +34,10 @@ const MobileNav = ({isAuth}: { isAuth: boolean }) => {
 
     return (
       <div className="sm:hidden">
-        <Menu
-          onClick={toggleOpen}
-          className="relative z-50 h-5 text-zinc-700"
-        />
+        <Menu onClick={toggleOpen} className="relative z-50 h-5 text-white" />
         {isOpen ? (
           <div className="fixed animate-in slide-in-from-top-5 fade-in-20 inset-0 z-0 w-full">
-            <ul className="absolute bg-white border-b border-zinc-200 shadow-xl grid w-full gap-3 px-10 pt-20 pb-8">
+            <ul className="absolute bg-light-pink border-b border-light-white shadow-xl grid w-full gap-3 px-10 pt-20 pb-8">
               {!isAuth ? (
                 // Not Authenticated - use React Fragment since having this top level <div> that does nothing is worthless to have on DOM.
                 <>
@@ -48,7 +45,7 @@ const MobileNav = ({isAuth}: { isAuth: boolean }) => {
                     {/* The "/sign-up" and "/sign-in" files does not exists on the project directory but instead exists in "src\app\api\auth\[kindeAuth]\route.ts" from built-in KindeAuth with Next.js... Can make it work with the configuration in that directory */}
                     <Link
                       onClick={() => closeOnCurrent("/sign-up")}
-                      className="flex items-center w-full font-semibold text-green-600"
+                      className="flex items-center w-full font-semibold text-light-purple"
                       href="/sign-up"
                     >
                       Get Started <ArrowRight className="ml-2 h-5 w-5" />
@@ -59,7 +56,7 @@ const MobileNav = ({isAuth}: { isAuth: boolean }) => {
                   <li>
                     <Link
                       onClick={() => closeOnCurrent("/sign-in")}
-                      className="flex items-center w-full font-semibold"
+                      className="flex items-center w-full font-semibold text-light-purple"
                       href="/sign-in"
                     >
                       Sign In
@@ -70,7 +67,7 @@ const MobileNav = ({isAuth}: { isAuth: boolean }) => {
                   <li>
                     <Link
                       onClick={() => closeOnCurrent("/pricing")}
-                      className="flex items-center w-full font-semibold"
+                      className="flex items-center w-full font-semibold text-light-purple"
                       href="/pricing"
                     >
                       Pricing
@@ -82,7 +79,7 @@ const MobileNav = ({isAuth}: { isAuth: boolean }) => {
                   <li>
                     <Link
                       onClick={() => closeOnCurrent("/dashboard")}
-                      className="flex items-center w-full font-semibold"
+                      className="flex items-center w-full font-semibold text-light-purple"
                       href="/dashboard"
                     >
                       Dashboard
@@ -92,7 +89,7 @@ const MobileNav = ({isAuth}: { isAuth: boolean }) => {
                   <li className="my-3 h-px w-full bg-gray-300" />
                   <li>
                     <Link
-                      className="flex items-center w-full font-semibold"
+                      className="flex items-center w-full font-semibold text-light-purple"
                       href="/sign-out"
                     >
                       Sign Out

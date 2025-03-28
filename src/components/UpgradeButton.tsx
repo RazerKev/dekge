@@ -19,7 +19,7 @@ const UpgradeButton = () => {
 
   return (
     // onClick, the user create a checkout session so user can upgrade (using tRPC) with createStripeSession being invoked
-    <Button onClick={() => createStripeSession()} className="w-full">
+    <Button onClick={() => createStripeSession()} className="w-full bg-dark-purple hover:bg-night-purple">
       Upgrade Now <ArrowRight className="h-5 w-5 ml-1.5" />
     </Button>
   );

@@ -35,23 +35,22 @@ const onUploadComplete = async ({
 }: {
   // Need to declare the types, not inferred by uploadthing
   // metadata type is whatever is return from the "middleware" function above
-  metadata: Awaited<ReturnType<typeof middleware>>
+  metadata: Awaited<ReturnType<typeof middleware>>;
   file: {
     // These three types are built inside file from uploadthing & provided so have to make and define its type in here
-    key: string
-    name: string
-    url: string
-  },
+    key: string;
+    name: string;
+    url: string;
+  };
 }) => {
-
   const isFileExist = await db.file.findFirst({
     where: {
-      key: file.key
-    }
-  })
+      key: file.key,
+    },
+  });
 
   // If file exists in database, return and do not go through any of the code below
-  if (isFileExist) return
+  if (isFileExist) return;
 
   // Whatever return from middleware '{userId}' will be accessible from the '.onUploadComplete()' as the metadata
 
@@ -63,34 +62,48 @@ const onUploadComplete = async ({
       name: file.name,
       userId: metadata.userId,
 
-      // file.url times out so can't do so can get image url from AWS S3 which is under the hood for uploadThing
-      url: `https://uploadthing-prod.s3.us-west-2.amazonaws.com/${file.key}`, // Use this exact url. Will always work unchanged
+      // Use the key directly to construct the URL
+      url: `https://utfs.io/f/${file.key}`,
       uploadStatus: "PROCESSING",
     },
   });
   // When uploading PDF right away, will index it so when asked a question, it's already indexed and can search just for the parts that are similar to the question
 
   try {
-    console.log("In this try block.");
+    // console.log("In this try block.");
     // Need PDF file here in memory to index it and how many pages it has. Can fetch the URL from a couple lines above, below
-    const response = await fetch(
-      `https://uploadthing-prod.s3.us-west-2.amazonaws.com/${file.key}`
-    );
-    console.log("Response: ", response);
+    // Use the same authenticated URL for fetching the file
+    const response = await fetch(`https://utfs.io/f/${file.key}`, {
+      headers: {
+        Accept: "application/pdf",
+      },
+    });
+    // console.log("Response: ", response);
     // Need to be a "Blob" object to index it.
     const blob = await response.blob();
-    console.log("Blob: ", blob);
+    // console.log("Blob: ", blob);
 
     // Load PDF file into memory
     const loader = new PDFLoader(blob);
-    console.log("Loader: ", loader);
+    // console.log("Loader: ", loader);
 
     // Page Content will be in this document
     const pageLevelDocs = await loader.load();
-    console.log("pageLevelDocs: ", pageLevelDocs);
+    console.log("The pageLevelDocs: ", pageLevelDocs);
 
     // Amount of pages
     const pagesAmt = pageLevelDocs.length;
+    console.log("Pages Amount: ", pagesAmt);
+    await db.file.update({
+      where: {
+        id: createdFile.id,
+      },
+      data: {
+        pageAmt: pagesAmt,
+      },
+    });
+
+    // NOTE - Maybe update the database when obtaining the page amount from the document and have it check if it is more than the plan (can check that part on tRPC)
 
     // To check if user is subscribe for pro plan
     const { subscriptionPlan } = metadata;
@@ -101,8 +114,64 @@ const onUploadComplete = async ({
     const isFreeExceeded =
       pagesAmt > PLANS.find((plan) => plan.name === "Free")!.pagesPerPdf;
 
+    // Get the total number of files from the user
+    const userWithFileCount = await db.user.findMany({
+      where: {
+        id: metadata.userId,
+      },
+      include: {
+        _count: {
+          select: {
+            File: true,
+          },
+        },
+      },
+    });
+
+    // Since "findMany" with a "where" clause that matches a specific userId, the "userWithFileCount" array should only contain one user (or none if no user matches the userId). Therefore, can directly access the "_count.File" property of the first user in the array.
+    // Checks if the userWithFileCount array is not empty and if the _count property exists on the first user in the array.
+    if (userWithFileCount.length > 0 && userWithFileCount[0]._count) {
+      const fileCount = userWithFileCount[0]._count.File;
+      console.log(
+        "This is total number of file count for this user: ",
+        fileCount
+      );
+    }
+    // Did not finish yet but use this fileCount to check if it is less than quota or free and pro plan, if not, uploadStatus failed and then can have a tRPC API endpoint that when deleting file, goes through the DB sorted by createdFirst and update the nex failedStatus file to SUCCESS IF pageNum does not exceed and maybe check quota again??
+
+    const isFreeQuotaExceeded =
+      userWithFileCount.length > 0 && userWithFileCount[0]._count
+        ? userWithFileCount[0]._count.File >
+          PLANS.find((plan) => plan.name === "Free")!.quota
+          ? true
+          : false
+        : false;
+
+    const isProQuotaExceeded =
+      userWithFileCount.length > 0 && userWithFileCount[0]._count
+        ? userWithFileCount[0]._count.File >
+          PLANS.find((plan) => plan.name === "Pro")!.quota
+          ? true
+          : false
+        : false;
+
+    console.log(
+      "Outside block statement. Checking these variables that will be called below:"
+    );
+    console.log("isSubscribed: ", isSubscribed);
+    console.log("isProExceeded: ", isProExceeded);
+    console.log("isFreeExceeded: ", isFreeExceeded);
     // On the pro plan & exceeded the limit or on free plan & exceeded the free limit
-    if ((isSubscribed && isProExceeded) || (!isSubscribed && isFreeExceeded)) {
+    if (
+      (isSubscribed && (isProExceeded || isProQuotaExceeded)) ||
+      (!isSubscribed && (isFreeExceeded || isFreeQuotaExceeded))
+    ) {
+      console.log(
+        "In this block statement checking if on pro plan & exceeded the limit or on free plan & exceeded the free limit. These variables will be called below:"
+      );
+      console.log("isSubscribed: ", isSubscribed);
+      console.log("isProExceeded: ", isProExceeded);
+      console.log("isFreeExceeded: ", isFreeExceeded);
       await db.file.update({
         data: {
           uploadStatus: "FAILED",
@@ -120,37 +189,61 @@ const onUploadComplete = async ({
         ...doc.metadata,
         fileId: createdFile.id,
       };
-      console.log("pageLevelDocs For Each Doc Metadata: ", doc.metadata);
+      // console.log("pageLevelDocs For Each Doc Metadata: ", doc.metadata);
     });
 
     // Vectorized and index entire document
     // const pinecone = await getPineconecClient()
     const pineconeIndex = pinecone.Index("dekge"); // The main name for the index on Pinecone
+    // console.log("pineconeIndex: ", pineconeIndex);
 
     // Uses the OpenAI API to generate embeddings for a given text
     const embeddings = new OpenAIEmbeddings({
       openAIApiKey: process.env.OPENAI_API_KEY, // Passed in the OpenAI key from ".env" file
     });
+    // console.log("embeddings: ", embeddings);
+
+    // CODE EXECUTION STOP HERE AND DOES NOT GO PAST THE "await PineconeStore.fromDocuments()"
 
     // Generating the vectors with everything obtained from above
+    // await PineconeStore.fromDocuments(pageLevelDocs, embeddings, {
+    //   pineconeIndex,
+    //   // Can save a vector to a certain namespace
+    //   // When querying a fileId, can get all the vectors for that certain file.
+    //   // namespace: createdFile.id,
+    // });
+    console.log("At the last stage before PineconeStore");
+    // await PineconeStore.fromExistingIndex(embeddings, {
+    //   pineconeIndex,
+    //   filter: { fileId: pageLevelDocs.forEach((doc) => { doc.metadata.fileId }) },
+    // });
+
+    // NOTE -  If the AI can not give an answer based on the document provided, then it must be the PineconeStore. If the upload of the document does not go through, (since updating the database "uploadStatus" is at the end of this code), then it is the PineconeStore code below causing this.
     await PineconeStore.fromDocuments(pageLevelDocs, embeddings, {
       pineconeIndex,
-      // Can save a vector to a certain namespace
-      // When querying a fileId, can get all the vectors for that certain file.
-      // namespace: createdFile.id,
     });
-    // console.log("PineconeStore: ", doc.metadata);
+    console.log("Success, passed the PineconeStore");
 
-    // Update file to successful upload state
-    await db.file.update({
-      data: {
-        uploadStatus: "SUCCESS",
-      },
-      where: {
-        // Update data where the ID of the file matches the "createdFile.id"
-        id: createdFile.id,
-      },
-    });
+    // console.log(
+    //   "One stage before updating the file to successful upload state. Here is the file status right now: ",
+    //   file
+    // );
+
+    // Update file to successful upload state, will need if statement to prevent "uploadStatus" if set to FAILED from if statement above from being re-update
+    if (
+      (isSubscribed && !isProExceeded && !isProQuotaExceeded) ||
+      (!isSubscribed && !isFreeExceeded && !isFreeQuotaExceeded)
+    ) {
+      await db.file.update({
+        data: {
+          uploadStatus: "SUCCESS",
+        },
+        where: {
+          // Update data where the ID of the file matches the "createdFile.id"
+          id: createdFile.id,
+        },
+      });
+    }
     // If there's a problem, then uploadStatus is a failed.
   } catch (error) {
     await db.file.update({
@@ -174,7 +267,7 @@ export const ourFileRouter = {
     .middleware(middleware)
     // This will never be called from any client so can't get user subscription below BUT can for middleware above.
     .onUploadComplete(onUploadComplete),
-    // Pro Plan
+  // Pro Plan
   proPlanUploader: f({ pdf: { maxFileSize: "16MB" } })
     .middleware(middleware)
     .onUploadComplete(onUploadComplete),

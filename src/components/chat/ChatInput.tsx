@@ -18,8 +18,8 @@ const ChatInput = ({ isDisabled }: ChatInputProps) => {
   return (
     <div className="absolute bottom-0 left-0 w-full">
       <div className="mx-2 flex flex-row gap-3 md:mx-4 md:last:mb-6 lg:mx-auto lg:max-w-2xl xl:max-w-3xl">
-        <div className="relative flex h-full flex-1 items-stretch md:flex-col">
-          <div className="relative flex flex-col w-full flex-grow-0 p-4">
+        <div className="relative flex h-full flex-1 items-stretch md:flex-col px-4 pt-4">
+          <div className="relative flex flex-col w-full flex-grow-0">
             <div className="relative">
               {/* "maxRows={}" does not come preinstalled with Textarea so have to add it in component file with "react-textarea-autosize" dependency added. */}
               <Textarea
@@ -44,7 +44,7 @@ const ChatInput = ({ isDisabled }: ChatInputProps) => {
               <Button
                 // Loading is the message is currently being sent to the API or AI is currently answering the question
                 disabled={isLoading || isDisabled}
-                className="absolute bottom-1.5 right-[8px]"
+                className="bg-dark-purple absolute bottom-1.5 right-[8px]"
                 aria-label="send message"
                 onClick={() => {
                   addMessage(); // From context

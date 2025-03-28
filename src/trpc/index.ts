@@ -7,6 +7,9 @@ import { INFINITE_QUERY_LIMIT } from "@/config/infinite-query";
 import { absoluteUrl } from "@/lib/utils";
 import { getUserSubscriptionPlan, stripe } from "@/lib/stripe";
 import { PLANS } from "@/config/stripe";
+import { UTApi } from "uploadthing/server";
+
+export const utapi = new UTApi();
 
 export const appRouter = router({
   // Added export
@@ -26,8 +29,10 @@ export const appRouter = router({
       },
     });
 
+    console.log("One stage before checking if user in database");
     // If the user in datbase that was check does not exists, then create the user in the database
     if (!dbUser) {
+      console.log("Creating the database user");
       // Creates user in the DB
       await db.user.create({
         data: {
@@ -36,6 +41,7 @@ export const appRouter = router({
           email: user.email,
         },
       });
+      console.log("Finished Creating the database user with this data");
     }
 
     return { success: true };
@@ -70,11 +76,48 @@ export const appRouter = router({
     // No database user, return error
     if (!dbUser) throw new TRPCError({ code: "UNAUTHORIZED" });
 
-    // If the user is already subscribe, take them to page where they can cancel or manage their subscriptions. If they're not, take them to a page to get them subscribe & directly pay
+    // If the user is already subscribed, take them to page where they can cancel or manage their subscriptions. If they're not, take them to a page to get them subscribe & directly pay
     const subscriptionPlan = await getUserSubscriptionPlan();
 
-    // If on pro plan
+    // If on pro plan, can activate this when any of the uploadstatus of the files are failed due to not being subscribed earlier but checking if the user is subscribed can now activate some of the those files that were once failed.
+
+    // New PROBLEM - This IF statement will no go through if file is failed and user clicked the button to upgrade since the upgrade succession is not complete (This if statement is reached before user finish the checkout)... Whole if block needs to be checked AFTER the session is completed and done, NOT DURING.
+    console.log("One stage before entering new code I created");
     if (subscriptionPlan.isSubscribed && dbUser.stripeCustomerId) {
+      console.log(
+        "We have enter the subscription plan and dbUser Stripe Id Part on tRPC"
+      );
+      // New Part of the Code 3/14/2024
+      const proPlan = PLANS.find((plan) => plan.slug === "pro");
+      const files = await db.file.findMany({
+        where: {
+          userId: ctx.userId,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: proPlan?.quota,
+      });
+
+      const eligibleFiles = files.filter(
+        (file) =>
+          file.uploadStatus === "FAILED" &&
+          file.pageAmt <= proPlan?.pagesPerPdf!
+      ); // Note: adding the "!" at the end forces typescript that "('proPlan.pagesPerPdf' is possibly 'undefined'.)" to be ignored since we know that will exist.
+
+      const filedIds = eligibleFiles.map((file) => file.id);
+
+      await db.file.updateMany({
+        where: {
+          id: {
+            in: filedIds,
+          },
+        },
+        data: {
+          uploadStatus: "SUCCESS",
+        },
+      });
+
       // Send user to a management page where they can cancel or manage subscription
       const stripeSession = await stripe.billingPortal.sessions.create({
         customer: dbUser.stripeCustomerId,
@@ -168,10 +211,138 @@ export const appRouter = router({
       };
     }),
 
-  // API Endpoint - Getting File UploadStatus from the "core.ts", "onUploadComplete" for the ChatInput loading state. Need certain POST body as the input
+  // API Endpoint - Getting File "uploadStatus" from the "core.ts" from uploadthing, "onUploadComplete" for the ChatInput loading state. Need certain POST body as the input
   getFileUploadStatus: privateProcedure
     .input(z.object({ fileId: z.string() }))
     .query(async ({ input, ctx }) => {
+      // Get subscription status and plans
+      const subscriptionPlan = await getUserSubscriptionPlan();
+      const freePlan = PLANS[0];
+
+      // Find the file
+      const file = await db.file.findFirst({
+        where: {
+          id: input.fileId,
+          userId: ctx.userId,
+        },
+      });
+
+      if (!file) return { status: "PENDING" as const };
+
+      // If file meets free plan criteria, mark as SUCCESS regardless of subscription status
+      if (file.pageAmt <= freePlan.pagesPerPdf) {
+        // Check if within free plan quota
+        const filesCount = await db.file.count({
+          where: {
+            userId: ctx.userId,
+            uploadStatus: "SUCCESS",
+          },
+        });
+
+        if (filesCount <= freePlan.quota) {
+          // Update status to SUCCESS if it was FAILED
+          if (file.uploadStatus === "FAILED") {
+            await db.file.update({
+              where: { id: file.id },
+              data: { uploadStatus: "SUCCESS" },
+            });
+            return { status: "SUCCESS" as const };
+          }
+          return { status: file.uploadStatus };
+        }
+      }
+
+      // If file exceeds free plan limits and user is not subscribed, mark as FAILED
+      if (!subscriptionPlan.isSubscribed && file.pageAmt > freePlan.pagesPerPdf) {
+        if (file.uploadStatus !== "FAILED") {
+          await db.file.update({
+            where: { id: file.id },
+            data: { uploadStatus: "FAILED" },
+          });
+          return { status: "FAILED" as const };
+        }
+      }
+
+      console.log("Status from tRPC: ", file.uploadStatus);
+      return { status: file.uploadStatus };
+    }),
+
+  // New API Endpoint - Checking if the user changed from free plan to pro plan and had files uploaded that were locked only for pro plans. Changed them accordingly
+
+  // NOTE - NEED TO MAKE THIS A MUTATION TO CHANGE THE BACKEND FILE UPLOADSTATUS WHEN GETTING USERID - 5/23/2024
+  updateFileStatus: privateProcedure.mutation(async ({ ctx }) => {
+    console.log("We have entered the updateFileStatus");
+
+    const { userId } = ctx;
+
+    // No user id, return error
+    if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+    // Seeing database entries for user
+    const dbUser = await db.user.findFirst({
+      // Find the first user where id matches userId
+      where: {
+        id: userId,
+      },
+    });
+    // No database user, return error
+    if (!dbUser) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+    // If on pro plan, can activate this when any of the uploadstatus of the files are failed due to not being subscribed earlier but checking if the user is subscribed can now activate some of the those files that were once failed.
+    const subscriptionPlan = await getUserSubscriptionPlan();
+
+    if (subscriptionPlan.isSubscribed && dbUser.stripeCustomerId) {
+      // // New Part of the Code 3/14/2024
+      const proPlan = PLANS.find((plan) => plan.slug === "pro");
+      const files = await db.file.findMany({
+        where: {
+          userId: ctx.userId,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: proPlan?.quota,
+      });
+
+      const eligibleFiles = files.filter(
+        (file) =>
+          file.uploadStatus === "FAILED" &&
+          file.pageAmt <= proPlan?.pagesPerPdf!
+      ); // Note: adding the "!" at the end forces typescript that "('proPlan.pagesPerPdf' is possibly 'undefined'.)" to be ignored since we know that will exist.
+
+      const filedIds = eligibleFiles.map((file) => file.id);
+
+      await db.file.updateMany({
+        where: {
+          id: {
+            in: filedIds,
+          },
+        },
+        data: {
+          uploadStatus: "SUCCESS",
+        },
+      });
+      // return { status: files.forEach(file => (file.uploadStatus)) };
+      return { status: eligibleFiles.forEach((file) => file.uploadStatus) };
+    }
+    return true;
+  }),
+
+  // 9/11/2024 - Another new mutation needed for BillingForms.tsx. Checks if the subscription is cancelled as well if subscription plan is past the stripeCurrentPeriodEnd
+
+
+  // Old mutation - will be removed
+  getFileStatusUpdateProFilesStatus: privateProcedure
+    .input(z.object({ fileId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      // Find many files where fileId from the /dashboard/[fileid] params matches, userId from Kinde matches, if pageAmt is less than or equal to pro plan, if quota (number of files is less than or equal to pro plan) while sorted by createdAt to get the most recent (or could be oldest) files that were failed due to upgrade from free plan to pro plan during the transition. uploadstatus for each of these files found will be set to success since they meet the criteria.
+      const subscriptionPlan = await getUserSubscriptionPlan();
+      // NOTE: AT this part, seeing if the subscriptionPlan shows for the specific user
+      // console.log(
+      //   "This is the subscription plan inside the checkProFileUploadStatus: ",
+      //   subscriptionPlan
+      // );
+
       // Find a file and check the status of the file upload
       const file = await db.file.findFirst({
         // Find file 'where' the id is the "input.fileid" from "input" and "fileid" a couple lines above
@@ -181,10 +352,45 @@ export const appRouter = router({
           userId: ctx.userId, // userId matches the login user
         },
       });
-      // After finding the file, return status
-      // Return "status" as a "const" for TypeScript to know "PENDING" is one of the valid states the file can be in based on the "enum UploadStatus" in "\prisma\schema.prisma" and is to be exactly the PENDING string (so use "as const").
       if (!file) return { status: "PENDING" as const };
 
+      console.log("Stage 1");
+
+      // If subscribed but file upload stats is failed, will update the first number of files under pro plan quota to SUCCESS if it meets the requirement of less than pro plan pagesPerPdf.
+      if (subscriptionPlan.isSubscribed && file?.uploadStatus === "FAILED") {
+        console.log("IT ENTER IN THIS STAGE");
+        const proPlan = PLANS.find((plan) => plan.slug === "pro");
+        const files = await db.file.findMany({
+          where: {
+            userId: ctx.userId,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: proPlan?.quota,
+        });
+
+        // const failedFiles = files.filter(file => file.uploadStatus === "FAILED")
+        const eligibleFiles = files.filter(
+          (file) =>
+            file.uploadStatus === "FAILED" &&
+            file.pageAmt <= proPlan?.pagesPerPdf!
+        ); // Note: adding the "!" at the end forces typescript that "('proPlan.pagesPerPdf' is possibly 'undefined'.)" to be ignored since we know that will exist.
+        const filedIds = eligibleFiles.map((file) => file.id);
+
+        await db.file.updateMany({
+          where: {
+            id: {
+              in: filedIds,
+            },
+          },
+          data: {
+            uploadStatus: "SUCCESS",
+          },
+        });
+        return { status: file.uploadStatus };
+      }
+      console.log("Status from tRPC: ", file.uploadStatus);
       return { status: file.uploadStatus };
     }),
 
@@ -220,10 +426,13 @@ export const appRouter = router({
           // Note - Extremely insecure, anyone can pass in any id and find & delete the file. So make sure the file has the userID of the user that's calling the API endpoint below.
           userId,
 
-          // Overall, searches for the currernt logged in user ID and the current filels the logged in user owns.
+          // Overall, searches for the current logged in user ID and the current filels the logged in user owns.
         },
       });
       if (!file) throw new TRPCError({ code: "NOT_FOUND" });
+
+      // NEW - Delete file on uploadthing side
+      await utapi.deleteFiles(file.key);
 
       await db.file.delete({
         where: {

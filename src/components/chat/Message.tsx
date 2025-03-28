@@ -17,7 +17,7 @@ const Message = forwardRef<HTMLDivElement, MessageProps>(
   ({ message, isNextMessageSamePerson }, ref) => {
     return (
       <div
-        // Need to pass in ref and have it declared at the top as the props to get it & for it to work from "Messages.tsx"... Accepting the "ref" from the "Messages.tsx" component. 
+        // Need to pass in ref and have it declared at the top as the props to get it & for it to work from "Messages.tsx"... Accepting the "ref" from the "Messages.tsx" component.
         ref={ref}
         className={cn("flex items-end", {
           // Put the user message to the end if it's the user (Conditional Check)
@@ -29,8 +29,8 @@ const Message = forwardRef<HTMLDivElement, MessageProps>(
           className={cn(
             "relative flex h-6 w-6 aspect-square items-center justify-center",
             {
-              "order-2 bg-blue-600 rounded-sm": message.isUserMessage,
-              "order-1 bg-zinc-800 rounded-sm": !message.isUserMessage,
+              "order-2 bg-dark-purple rounded-sm": message.isUserMessage,
+              "order-1 bg-slate-700 rounded-sm": !message.isUserMessage,
               // Apply an invisible property if next message is from same person is true
               invisible: isNextMessageSamePerson,
             }
@@ -53,8 +53,8 @@ const Message = forwardRef<HTMLDivElement, MessageProps>(
           {/* AI sent the message or if user did */}
           <div
             className={cn("px-4 py-2 rounded-lg inline-block", {
-              "bg-blue-600 text-white": message.isUserMessage,
-              "bg-gray-200 text-gray-900": !message.isUserMessage,
+              "bg-dark-purple text-white": message.isUserMessage,
+              "bg-slate-200 text-gray-900": !message.isUserMessage,
               "rounded-br-none":
                 !isNextMessageSamePerson && message.isUserMessage,
               "rounded-bl-none":

@@ -10,6 +10,8 @@ import { db } from "@/db";
 import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
 import type Stripe from "stripe";
+// Added 9/11/2024 - Import PLANS to check against limits when subscription changes
+import { PLANS } from "@/config/stripe";
 
 export async function POST(request: Request) {
   const body = await request.text(); // contains the event data. Converts rawbody to a string 
@@ -37,9 +39,8 @@ export async function POST(request: Request) {
     );
   }
 
-
   // Event data is expected to be an object containing info about checkout session, including metadata such as user ID.
-  // The "as Stripe.Checkout.Session" part is a type cast in TypeScript. It’s telling TypeScript to treat "event.data.object" as a "Stripe.Checkout.Session" object. This allows you to access properties of "Stripe.Checkout.Session" on "event.data.object" without TypeScript throwing errors. "data" and "object" are both defined in Stripe APIs and "event.data.object" could be several different types of objects depending on the type of the event (it could be a Checkout.Session object, an Invoice object, a PaymentIntent object, etc.). But by casting it to "Stripe.Checkout.Session", you’re specifying that in this context, you expect it to be a "Checkout.Session object".
+  // The "as Stripe.Checkout.Session" part is a type cast in TypeScript. It's telling TypeScript to treat "event.data.object" as a "Stripe.Checkout.Session" object. This allows you to access properties of "Stripe.Checkout.Session" on "event.data.object" without TypeScript throwing errors. "data" and "object" are both defined in Stripe APIs and "event.data.object" could be several different types of objects depending on the type of the event (it could be a Checkout.Session object, an Invoice object, a PaymentIntent object, etc.). But by casting it to "Stripe.Checkout.Session", you're specifying that in this context, you expect it to be a "Checkout.Session object".
   const session = event.data.object as Stripe.Checkout.Session;
 
   // The metadata added from creating a stripeSession from tRPC API Endpoint in "src\trpc\index.ts" and can add user ID at the end since that is created inside and this to see if the session for this user exists, if user does not exists return 200 response
@@ -51,12 +52,10 @@ export async function POST(request: Request) {
 
   // User buys for the first time, can add into database. This means user completed a checkout session (made the payment) and this code retrieves the subscription details from Stripe and then updates the user's record in the database with the subscription details.
   if (event.type === "checkout.session.completed") {
-
     const subscription = await stripe.subscriptions.retrieve(
       session.subscription as string
     );
 
-    // Added in
     await db.user.update({
       where: {
         id: session.metadata.userId,
@@ -70,7 +69,39 @@ export async function POST(request: Request) {
         ),
       },
     });
-    // End of added code
+
+    // Added 9/11/2024 - When user subscribes to pro plan, update any previously failed files that now meet pro plan criteria
+    const proPlan = PLANS.find((plan) => plan.name === "Pro");
+    if (proPlan) {
+      // Find all failed files that are within pro plan page limits
+      const files = await db.file.findMany({
+        where: {
+          userId: session.metadata.userId,
+          uploadStatus: "FAILED",
+          pageAmt: {
+            lte: proPlan.pagesPerPdf,
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: proPlan.quota, // Only take up to pro plan quota
+      });
+
+      // If eligible files found, update them to SUCCESS
+      if (files.length > 0) {
+        await db.file.updateMany({
+          where: {
+            id: {
+              in: files.map((file) => file.id),
+            },
+          },
+          data: {
+            uploadStatus: "SUCCESS",
+          },
+        });
+      }
+    }
   }
 
   // Monthly plan is renewed. Code retrieves the subscription details from Strip, then updates the user's record in the database with the new subscription end date and price ID
@@ -79,7 +110,6 @@ export async function POST(request: Request) {
     const subscription = await stripe.subscriptions.retrieve(
       session.subscription as string
     );
-    // Added in
     await db.user.update({
       where: {
         stripeSubscriptionId: subscription.id, // Do this method since we already have the user
@@ -91,7 +121,67 @@ export async function POST(request: Request) {
         ),
       },
     });
-    // End of the added code
+  }
+
+  // Added 9/11/2024 - Handle subscription cancellation or expiration
+  // This ensures files are properly restricted when pro plan access ends
+  if (event.type === "customer.subscription.deleted" || event.type === "customer.subscription.updated") {
+    const subscription = event.data.object as Stripe.Subscription;
+    
+    // If subscription is cancelled or set to cancel at period end
+    if (subscription.status === 'canceled' || subscription.cancel_at_period_end) {
+      const user = await db.user.findFirst({
+        where: {
+          stripeSubscriptionId: subscription.id,
+        },
+      });
+
+      if (user) {
+        // Get free plan limits to check files against
+        const freePlan = PLANS[0];
+        
+        // First update: Mark files exceeding free plan page limits as FAILED
+        await db.file.updateMany({
+          where: {
+            userId: user.id,
+            pageAmt: {
+              gt: freePlan.pagesPerPdf,
+            },
+          },
+          data: {
+            uploadStatus: "FAILED",
+          },
+        });
+
+        // Second update: Handle quota limits
+        // Get all currently successful files to check against free plan quota
+        const successfulFiles = await db.file.findMany({
+          where: {
+            userId: user.id,
+            uploadStatus: "SUCCESS",
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
+
+        // If user has more successful files than free plan quota allows,
+        // mark the excess files as FAILED (keeping the most recent ones up to quota)
+        if (successfulFiles.length > freePlan.quota) {
+          const excessFiles = successfulFiles.slice(freePlan.quota);
+          await db.file.updateMany({
+            where: {
+              id: {
+                in: excessFiles.map((file) => file.id),
+              },
+            },
+            data: {
+              uploadStatus: "FAILED",
+            },
+          });
+        }
+      }
+    }
   }
 
   // Lets Stripe know that the webhook event was received and processed successfully

@@ -4,6 +4,9 @@ import { db } from "@/db";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { notFound, redirect } from "next/navigation";
 
+// Can get if the user is subscribed, their plan, and passed it into ChatWrapper which then can be used to refresh and check if the uploadstatus that was once failed from free can be set to true after upgrade to pro
+import { getUserSubscriptionPlan } from "@/lib/stripe";
+
 interface PageProps {
   params: {
     fileid: string; // Needs to match the value name of '[fileid]' in the directory of ./[fileid]
@@ -26,6 +29,9 @@ const Page = async ({ params }: PageProps) => {
   // Guard Clause - User is not logged in but taken to the files, redirect them to auth callback page & if they have an account, then redirect them back because the 'origin=dashbaard' is passed.
   if (!user || !user.id) redirect(`/auth-callback?origin=dashboard/${fileid}`);
 
+  // Get subscription plan from the user
+  const subscriptionPlan = await getUserSubscriptionPlan();
+
   // Make call from database (file URL, render PDF)
   const file = await db.file.findFirst({
     where: {
@@ -34,6 +40,7 @@ const Page = async ({ params }: PageProps) => {
     },
   });
 
+  if (file) console.log("This is the file found", file)
   if (!file) notFound(); // Throws a 404 error when there's no file
 
   // After logical statement and checking, now display the content below. The 'h-[calc(100vh-3.5rem)]' contains 3.5rem to offset the navbar height.
@@ -45,13 +52,13 @@ const Page = async ({ params }: PageProps) => {
         <div className="flex-1 xl:flex">
           <div className="px-4 py-6 sm:px-6 lg:pl-8 xl:flex-1 xl:pl-6">
             {/* file.url is being fetched from database */}
-            <PdfRenderer url={file.url}/> 
+            <PdfRenderer url={file.url} />
           </div>
         </div>
         {/* Right Side - Chat PDF */}
-        <div className="shrink-0 flex-[0.75] border-t border-gray-200 lg:w-96 lg:border-l lg:border-t-0">
+        <div className="shrink-0 flex-[0.75] border-t border-gray-200 lg:w-96 lg:border-l lg:border-t-0 mt-6">
           {/* Wrapper Component - Wraps both input and message (separate components but combined into one here) */}
-          <ChatWrapper fileId={file.id}/>
+          <ChatWrapper fileId={file.id} subscriptionPlan={subscriptionPlan} />
         </div>
       </div>
     </div>
