@@ -142,7 +142,8 @@ export const POST = async (req: NextRequest) => {
   });
 
   // Return a real-time stream back to the client. Main reason why one can't use tRPC
-  const stream = OpenAIStream(response, {
+  // Cast the response to any to handle type incompatibility between OpenAI SDK v4 and the ai package
+  const stream = OpenAIStream(response as any, {
     // Fully done stream of the response and sending everything back in chunks to client, get back the onComplete response as one long sentence as the completion and can put it as the message.
     async onCompletion(completion) {
       await db.message.create({
