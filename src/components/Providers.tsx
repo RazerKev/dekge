@@ -17,8 +17,8 @@ const Providers = ({ children }: PropsWithChildren) => {
       links: [
         httpBatchLink({
           // Will need to be changed to "absoluteUrl("/api/trpc")"
-          url: "http://localhost:3000/api/trpc",
-          // url: absoluteUrl("/api/trpc")
+          // url: "http://localhost:3000/api/trpc",
+          url: absoluteUrl("/api/trpc")
         }),
       ],
     })
