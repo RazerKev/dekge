@@ -108,8 +108,7 @@ export const POST = async (req: NextRequest) => {
 
   // Formatted messages ready to be sent to OpenAI for a response (need to create "openai" utility for it to be called)
   const response = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
-    temperature: 0,
+    model: "gpt-6-luna",
     stream: true, // Going to stream this response to the front end in real time
 
     // Want the previous messages that were exchanged in the chat. Have all messages attached previously and the AI knows what it means and in a specific format. (This part is copied and pasted from GitHub)... teaches how to prompt more than how to code.
