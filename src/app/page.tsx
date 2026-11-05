@@ -23,12 +23,6 @@ export default function Home() {
   return (
     <>
       <div className="min-h-screen overflow-auto relative overflow-x-hidden overflow-y-hidden">
-        {/* Tiny Banner */}
-        {/* <div> */}
-        {/* <p>
-              New Release: Dekge Special Plan! Get Free AI Booster with your
-              referral
-            </p> */}
         {/* </div> */}
         {/* Top-right blob */}
         <motion.div
@@ -361,26 +355,6 @@ export default function Home() {
               })} before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-full before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent before:animate-shine`}
             >
               <p className="text-light-pink p-4 text-[1.15rem]">PDF</p>
-            </div>
-            <div
-              className={`${buttonVariants({
-                size: "sm",
-                className:
-                  "ml-3 mt-5 !rounded-full h-[2.25rem] w-[4.5rem] relative overflow-hidden",
-                variant: "lightpink",
-              })} before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-full before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent before:animate-shine`}
-            >
-              <p className="text-light-pink p-4 text-[1.15rem]">Word</p>
-            </div>
-            <div
-              className={`${buttonVariants({
-                size: "sm",
-                className:
-                  "ml-3 mt-5 !rounded-full h-[2.25rem] w-[4.5rem] relative overflow-hidden",
-                variant: "lightpink",
-              })} before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-full before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent before:animate-shine`}
-            >
-              <p className="text-light-pink p-4 text-[1.15rem]">.TXT</p>
             </div>
             <div
               className={`${buttonVariants({
